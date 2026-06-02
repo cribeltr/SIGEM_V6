@@ -520,3 +520,66 @@ table.dense thead th.sortable:hover { background: var(--surface-3); }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
+
+/* ============================================================================
+ * Rediseño v3 · pantalla "Hoy" calmada (Registrar + Pendientes) y Repartir MP.
+ * Filosofía: una intención por pantalla, jerarquía clara, espacio en blanco.
+ * Sólo presentación — no toca el motor ni los datos.
+ * ==========================================================================*/
+.home { max-width: 880px; margin: 0 auto; }
+.home-hd { margin: 12px 2px 24px; }
+.home-hd h1 { margin: 0; font-size: 24px; font-weight: 680; letter-spacing: -.5px; }
+.home-hd .sub { color: var(--muted); font-size: 13px; margin-top: 4px; text-transform: capitalize; }
+.home-hd .glance { color: var(--faint); font-size: 12.5px; margin-top: 10px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+
+.task { display: flex; align-items: center; gap: 15px; padding: 16px 18px; margin-bottom: 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); background: var(--accent-bg); border-radius: var(--radius); }
+.task .t-ico { color: var(--accent); flex: 0 0 auto; display: inline-flex; }
+.task .t-main { flex: 1; min-width: 0; }
+.task .t-main b { font-size: 14.5px; font-weight: 650; }
+.task .t-main div { color: color-mix(in srgb, var(--accent) 62%, var(--text)); font-size: 12.5px; margin-top: 2px; line-height: 1.4; }
+
+.block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 18px; box-shadow: var(--shadow); }
+.block-hd { padding: 16px 20px 6px; }
+.block-hd h2 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -.2px; }
+.block-hd .bh-sub { color: var(--faint); font-size: 12.5px; margin-top: 3px; }
+.block-bd { padding: 14px 20px 20px; }
+
+.reg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 12px; }
+.reg-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; text-align: left;
+  padding: 15px 16px; border: 1px solid var(--border-2); border-radius: var(--radius); background: var(--surface);
+  cursor: pointer; font: inherit; color: var(--text); transition: border-color .12s, background .12s, transform .08s, box-shadow .12s; }
+.reg-btn:hover { border-color: var(--accent); background: var(--accent-bg); transform: translateY(-2px); box-shadow: var(--shadow); }
+.reg-btn .r-ico { color: var(--accent); display: inline-flex; }
+.reg-btn b { font-size: 13.5px; font-weight: 600; }
+.reg-btn small { color: var(--faint); font-size: 11.5px; line-height: 1.35; }
+.reg-btn.maestro { border-style: dashed; }
+
+.pend-feed { display: flex; flex-direction: column; gap: 10px; }
+.pend-row { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--surface); cursor: pointer; transition: border-color .12s, background .12s; }
+.pend-row:hover { border-color: var(--border-2); background: var(--surface-2); }
+.pend-row .pr-bar { width: 3px; align-self: stretch; border-radius: 3px; background: var(--border-2); flex: 0 0 auto; }
+.pend-row.remind .pr-bar { background: var(--st); }
+.pend-row.overdue .pr-bar { background: var(--noop); }
+.pend-row .pr-main { flex: 1; min-width: 0; }
+.pr-top { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+.pr-desc { margin-top: 6px; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.pr-meta { margin-top: 6px; color: var(--muted); font-size: 12px; }
+.pr-actions { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; flex: 0 0 auto; }
+
+.home-empty { text-align: center; color: var(--faint); padding: 28px 16px; font-size: 13px; }
+
+/* Repartir MP del mes — lista simple, una fila por equipo */
+.rep-list { display: flex; flex-direction: column; }
+.rep-row { display: flex; align-items: center; gap: 14px; padding: 12px 2px; border-bottom: 1px solid var(--border); }
+.rep-row:last-child { border-bottom: none; }
+.rep-eq { flex: 1; min-width: 0; }
+.rep-sel { flex: 0 0 auto; width: 220px; max-width: 46%; }
+.rep-sel select { width: 100%; }
+
+@media (max-width: 680px) {
+  .pend-row { flex-wrap: wrap; }
+  .pr-actions { width: 100%; }
+  .rep-sel { width: 160px; }
+}

@@ -158,8 +158,10 @@
   // ============================ VIEWS =======================================
   const VIEWS = {};
 
-  // ---- INICIO: cola de trabajo --------------------------------------------
-  VIEWS.inicio = function () {
+  // ---- COLA DE TRABAJO (vista densa, ahora "bajo demanda" desde el menú Más) --
+  // Antes era el inicio por defecto. El nuevo inicio calmado vive en VIEWS.inicio
+  // (más abajo). Esta vista se conserva intacta para quien quiera el panel completo.
+  VIEWS.cola = function () {
     const S = H.getState();
     const noop = S.equipos.filter(e => e.estado === 'no_operativo');
     const st = S.equipos.filter(e => e.estado === 'en_servicio_tecnico');
@@ -1763,7 +1765,7 @@
     const listEl = h('div', { class: 'cmdk-list' });
     cmdkEl = h('div', { class: 'cmdk cmdk-modal' }, input, listEl); document.body.appendChild(cmdkEl); cmdkScrim.classList.add('on');
     const actions = [
-      ['Ir: Cola de trabajo', () => go('inicio'), '⌂'], ['Ir: Equipos', () => go('equipos'), '▦'], ['Ir: Pendientes', () => go('pendientes'), '✓'],
+      ['Ir: Hoy', () => go('inicio'), '⌂'], ['Ir: Cola de trabajo', () => go('cola'), '☰'], ['Ir: Equipos', () => go('equipos'), '▦'], ['Ir: Pendientes', () => go('pendientes'), '✓'],
       ['Ir: Ciclos', () => go('ciclos'), '↻'], ['Ir: Eventos', () => go('eventos'), '≡'], ['Ir: MP del mes (detalle)', () => go('asignaciones'), '▤'], ['Ir: Configuración', () => go('configuracion'), '⚙'],
       ['Nuevo evento', () => { closeCmdk(); formNuevoEvento({}); }, '+'], ['Nuevo pendiente', () => { closeCmdk(); formNuevoPendiente({}); }, '+'],
       ['Exportar Excel', () => { closeCmdk(); excelExport(); }, '⭳']
@@ -2368,6 +2370,279 @@
     document.body.appendChild(inp); inp.click(); setTimeout(() => inp.remove(), 1000);
   }
 
+  // ========================================================================
+  // INICIO · "Hoy" — pantalla principal calmada (rediseño v3)
+  // ------------------------------------------------------------------------
+  // Dos bloques: "Registrar" (arriba, botones directos) y "Pendientes" (abajo,
+  // priorizados con la regla única de los 3 días). Las tareas de inicio/fin de
+  // mes aparecen SOLO cuando corresponde. Todo lo demás (tablero, cumplimiento,
+  // equipos, ficha, bitácora…) vive bajo demanda en el menú "Más" o el buscador.
+  // No toca el motor: usa la misma API HHHA.* y los mismos campos de pendiente.
+  // ========================================================================
+  const DIAS_RECORD = 3;   // regla única para todos: 3 días sin avance → "recuérdale a X"
+  function soloNombre(full) { return ((full || '').split(' ')[0]) || full; }
+
+  // Última vez que actué sobre el pendiente (creación o último seguimiento).
+  function pendUltimoToque(p) {
+    let d = p.fechaCrea || '';
+    (p.seguimientos || []).forEach(s => { if (s.fecha && s.fecha > d) d = s.fecha; });
+    return d;
+  }
+  // Clasifica un pendiente ACTIVO para la lista priorizada del inicio.
+  function pendPrioridad(p) {
+    const hoy = H.hoyLocal();
+    const venc = p.fechaComp && p.fechaComp < hoy;
+    const overdue = venc ? H.diasEntreFechas(p.fechaComp, hoy) : 0;
+    const ref = pendUltimoToque(p);
+    const diasSin = ref ? H.diasEntreFechas(ref, hoy) : 0;
+    const recPorFecha = p.proxRecord && p.proxRecord <= hoy;
+    const recPor3d = p.ejecutor && diasSin >= DIAS_RECORD;
+    if (venc) return { score: 4000 + overdue, sev: 'overdue', etiqueta: 'Vencido' + (overdue > 0 ? ' ' + overdue + ' d' : '') };
+    if ((recPorFecha || recPor3d) && p.ejecutor) return { score: 3000 + diasSin, sev: 'remind', etiqueta: 'Recuérdale a ' + soloNombre(p.ejecutor) };
+    if (recPorFecha) return { score: 2900, sev: 'remind', etiqueta: 'Recordatorio' };
+    if (!p.ejecutor) return { score: 1500, sev: '', etiqueta: 'Por delegar' };
+    if (p.estado === 'en_proceso') return { score: 1000, sev: '', etiqueta: 'En curso' };
+    return { score: 500, sev: '', etiqueta: 'Por hacer' };
+  }
+
+  VIEWS.inicio = function () {
+    const root = h('div', { class: 'home' });
+    root.appendChild(homeHeader());
+    const tIni = tareaInicioMes(); if (tIni) root.appendChild(tIni);
+    const tFin = tareaFinMes(); if (tFin) root.appendChild(tFin);
+    root.appendChild(bloqueRegistrar());
+    root.appendChild(bloquePendientes());
+    return root;
+  };
+
+  function homeHeader() {
+    const S = H.getState();
+    const hoy = H.hoyLocal();
+    const noop = S.equipos.filter(e => e.estado === 'no_operativo').length;
+    const st = S.equipos.filter(e => e.estado === 'en_servicio_tecnico').length;
+    const hh = NOW.getHours();
+    const saludo = hh < 12 ? 'Buenos días' : hh < 20 ? 'Buenas tardes' : 'Buenas noches';
+    const fechaLarga = (() => { try { return new Date(hoy + 'T00:00:00').toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' }); } catch (e) { return hoy; } })();
+    const glance = h('div', { class: 'glance' });
+    if (noop || st) glance.appendChild(h('span', {},
+      [noop ? noop + ' no operativo' + (noop > 1 ? 's' : '') : '', st ? st + ' en servicio técnico' : ''].filter(Boolean).join(' · '), ' ',
+      h('span', { class: 'link', onclick: () => go('equipos', { estado: noop ? 'no_operativo' : 'en_servicio_tecnico' }) }, 'ver equipos')));
+    else glance.appendChild(h('span', {}, 'Todos los equipos operativos.'));
+    return h('div', { class: 'home-hd' }, h('h1', {}, saludo), h('div', { class: 'sub' }, fechaLarga), glance);
+  }
+
+  // ---- Tareas de mes (aparecen solo cuando corresponde y luego desaparecen) --
+  function taskCard(titulo, desc, accionLbl, fn, icon) {
+    return h('div', { class: 'task' },
+      h('span', { class: 't-ico' }, svg(icon || ic.asignaciones, 20)),
+      h('div', { class: 't-main' }, h('b', {}, titulo), h('div', {}, desc)),
+      h('button', { class: 'btn primary', onclick: fn }, accionLbl));
+  }
+  function tareaInicioMes() {
+    const S = H.getState();
+    const km = `${YEAR}-${String(MONTH + 1).padStart(2, '0')}`;
+    const asig = (S.asignacionesMP || {})[km] || {};
+    const prog = S.equipos.filter(e => e.estado !== 'baja' && H.mpProgramadaEnMes(e, MESES[MONTH]));
+    if (!prog.length) return null;
+    const sinAsig = prog.filter(e => !asig[e.inv]);
+    if (!sinAsig.length) return null;   // ya repartiste todo → la tarea desaparece
+    return taskCard('Repartir la MP de ' + MES_ESP(MONTH),
+      `${sinAsig.length} de ${prog.length} equipo(s) programado(s) aún sin responsable. Distribúyelos entre tus ejecutores.`,
+      'Distribuir', () => go('repartir'), ic.users);
+  }
+  function tareaFinMes() {
+    const last = new Date(YEAR, MONTH + 1, 0).getDate();
+    if (NOW.getDate() < last - 6) return null;   // solo la última semana del mes
+    const S = H.getState();
+    const km = `${YEAR}-${String(MONTH + 1).padStart(2, '0')}`;
+    const asig = (S.asignacionesMP || {})[km] || {};
+    const prog = S.equipos.filter(e => e.estado !== 'baja' && H.mpProgramadaEnMes(e, MESES[MONTH]));
+    const faltan = {};
+    prog.forEach(e => { const r = asig[e.inv]; if (r && H.mpEstadoMes(e, YEAR, MONTH) !== 'ejecutada') faltan[r] = (faltan[r] || 0) + 1; });
+    const n = Object.keys(faltan).length;
+    if (!n) return null;
+    return taskCard('Reportes de MP por entregar',
+      `${n} responsable(s) aún no entregan la MP de ${MES_ESP(MONTH)}. Solicítales el reporte.`,
+      'Ver / solicitar', () => formReportes(faltan), ic.audit);
+  }
+  function primerInvDe(persona) {
+    const S = H.getState();
+    const km = `${YEAR}-${String(MONTH + 1).padStart(2, '0')}`;
+    const asig = (S.asignacionesMP || {})[km] || {};
+    const e = S.equipos.find(eq => asig[eq.inv] === persona && eq.estado !== 'baja' && H.mpProgramadaEnMes(eq, MESES[MONTH]) && H.mpEstadoMes(eq, YEAR, MONTH) !== 'ejecutada');
+    return e ? e.inv : (S.equipos[0] && S.equipos[0].inv);
+  }
+  function formReportes(faltan) {
+    const filas = Object.entries(faltan).sort((a, b) => b[1] - a[1]);
+    openDrawer({
+      title: 'Reportes de MP · ' + MES_ESP(MONTH),
+      body: h('div', {},
+        h('div', { class: 'notice info' }, 'Personas con MP del mes asignadas que aún no entregan. "Solicitar" crea un pendiente a su nombre (sube a la lista de pendientes con recordatorio de ' + DIAS_RECORD + ' días).'),
+        h('div', { class: 'row-list', style: { marginTop: '10px' } }, ...filas.map(([persona, n]) =>
+          h('div', { class: 'mini-row', style: { alignItems: 'center' } },
+            h('div', { style: { flex: 1 } }, h('b', {}, persona), h('div', { class: 'faint', style: { fontSize: '11.5px' } }, n + ' MP sin reportar')),
+            h('button', { class: 'btn sm primary', onclick: ev => {
+              const r = H.crearPendiente({ inv: primerInvDe(persona), tipo: 'gestion_general', desc: `Solicitar reporte de MP de ${MES_ESP(MONTH)} ${YEAR} a ${persona} (${n} equipos)`, ejecutor: persona, proxRecord: H.addDias(H.hoyLocal(), DIAS_RECORD) });
+              if (!r.ok) return toast(r.error, 'error');
+              toast('Solicitud creada para ' + persona, 'success'); ev.target.disabled = true; ev.target.textContent = 'Solicitado ✓';
+            } }, 'Solicitar'))))),
+      footer: [h('button', { class: 'btn', onclick: closeDrawer }, 'Cerrar')]
+    });
+  }
+
+  // ---- Bloque "Registrar": botones directos para los eventos + cargar maestro --
+  function bloqueRegistrar() {
+    const reg = (icon, titulo, desc, fn, extraCls) => h('button', { class: 'reg-btn' + (extraCls ? ' ' + extraCls : ''), onclick: fn },
+      h('span', { class: 'r-ico' }, svg(icon, 20)), h('b', {}, titulo), desc ? h('small', {}, desc) : null);
+    return h('div', { class: 'block' },
+      h('div', { class: 'block-hd' }, h('h2', {}, 'Registrar'), h('div', { class: 'bh-sub' }, 'Anota lo que pasó hoy con un equipo')),
+      h('div', { class: 'block-bd' }, h('div', { class: 'reg-grid' },
+        reg(ic.asignaciones, 'Mantención', 'Preventiva ejecutada o reprogramada', () => formNuevoEvento({ tipo: 'Mantención preventiva' })),
+        reg(ic.cloud, 'Envío a serv. técnico', 'El equipo sale del hospital', () => formNuevoEvento({ tipo: 'Envío a servicio técnico' })),
+        reg(ic.pendientes, 'Solicitud de trabajo', 'Reporte de falla · abre correctivo', () => formNuevoEvento({ tipo: 'Solicitud de trabajo' })),
+        reg(ic.dl, 'Recepción', 'El equipo vuelve al hospital', () => formNuevoEvento({ tipo: 'Recepción' })),
+        reg(ic.eventos, 'Otro evento', 'Visita, orden de compra, reparación…', () => formNuevoEvento({})),
+        reg(ic.up, 'Cargar maestro', 'Importar el Excel del mes', () => importarMaestro(() => scheduleRefresh()), 'maestro')
+      )));
+  }
+
+  // ---- Bloque "Pendientes": lista priorizada con la regla de los 3 días -------
+  function bloquePendientes() {
+    const S = H.getState();
+    const activos = S.pendientes.filter(p => !p.anulado && p.estado !== 'cerrado');
+    const feed = activos.map(p => ({ p, ...pendPrioridad(p) })).sort((a, b) => b.score - a.score);
+    const urgentes = feed.filter(x => x.sev === 'overdue' || x.sev === 'remind').length;
+    const bd = h('div', { class: 'block-bd' });
+    if (!feed.length) mount(bd, h('div', { class: 'home-empty' }, 'No tienes pendientes activos. 🎉'));
+    else mount(bd,
+      h('div', { class: 'pend-feed' }, ...feed.slice(0, 15).map(pendRowCalm)),
+      feed.length > 15 ? h('div', { style: { marginTop: '14px', textAlign: 'center' } }, h('span', { class: 'link', onclick: () => go('pendientes') }, `Ver los ${feed.length} pendientes →`)) : null);
+    return h('div', { class: 'block' },
+      h('div', { class: 'block-hd', style: { display: 'flex', alignItems: 'flex-start', gap: '10px' } },
+        h('div', { style: { flex: 1 } }, h('h2', {}, 'Pendientes'),
+          h('div', { class: 'bh-sub' }, urgentes ? `${urgentes} necesita${urgentes > 1 ? 'n' : ''} tu atención hoy` : 'Todo bajo control')),
+        h('button', { class: 'btn sm', onclick: () => go('pendientes') }, 'Ver todos'),
+        h('button', { class: 'btn sm primary', onclick: () => formNuevoPendiente({}) }, svg(ic.plus, 14), 'Nuevo')),
+      bd);
+  }
+  function pendRowCalm({ p, sev, etiqueta }) {
+    const eq = H.findEquipo(p.inv) || {};
+    const ref = pendUltimoToque(p);
+    const diasSin = ref ? H.diasEntreFechas(ref, H.hoyLocal()) : null;
+    const metaParts = [p.ejecutor ? ('Con ' + p.ejecutor) : 'Sin delegar'];
+    if (diasSin != null) metaParts.push(diasSin === 0 ? 'desde hoy' : 'hace ' + diasSin + ' día' + (diasSin > 1 ? 's' : ''));
+    const pillCls = sev === 'overdue' ? 'noop' : sev === 'remind' ? 'st' : 'muted';
+    return h('div', { class: 'pend-row' + (sev ? ' ' + sev : ''), title: 'Abrir el pendiente', onclick: () => formPendiente(p) },
+      h('div', { class: 'pr-bar' }),
+      h('div', { class: 'pr-main' },
+        h('div', { class: 'pr-top' },
+          h('span', { class: 'pill ' + pillCls }, etiqueta),
+          h('span', { class: 'mono', style: { fontSize: '12px', color: 'var(--muted)' } }, p.inv),
+          h('b', { style: { fontSize: '13px' } }, TIPO_PENDIENTE[p.tipo] || p.tipo)),
+        p.desc ? h('div', { class: 'pr-desc' }, p.desc) : null,
+        h('div', { class: 'pr-meta' }, [eq.equipo || '', metaParts.join(' · ')].filter(Boolean).join(' — '))),
+      h('div', { class: 'pr-actions', onclick: ev => ev.stopPropagation() },
+        h('button', { class: 'btn sm', title: 'Delegar/solicitar a alguien y reiniciar el recordatorio', onclick: () => formDelegar(p) }, p.ejecutor ? 'Recordar' : 'Delegar'),
+        h('button', { class: 'btn sm', title: 'Anotar un seguimiento', onclick: () => formSeguimiento(p) }, 'Seguimiento'),
+        h('button', { class: 'btn sm ok', title: 'Marcar resuelto', onclick: () => { H.cambiarEstadoPend(p, 'cerrado'); toast('Pendiente resuelto', 'success'); } }, svg(ic.check, 14))));
+  }
+  // Delegar / solicitar: deja el pendiente a cargo de alguien y reinicia el reloj de 3 días.
+  function formDelegar(p) {
+    const eq = H.findEquipo(p.inv) || {};
+    const yaTiene = !!p.ejecutor;
+    const persona = selectEl([['', '— elige a quién —'], ...EJECUTORES.map(x => [x, x])], p.ejecutor || '');
+    const nota = h('textarea', { placeholder: 'Qué le pides (opcional)' });
+    openDrawer({
+      title: (yaTiene ? 'Recordar / reasignar · ' : 'Delegar · ') + p.inv,
+      body: h('div', {}, eqMini(eq, p),
+        h('div', { class: 'notice info' }, 'Queda a cargo de la persona elegida. Volverá al tope en ' + DIAS_RECORD + ' días si no se cumple, marcado "recuérdale a ' + (p.ejecutor ? soloNombre(p.ejecutor) : 'X') + '".'),
+        field('A cargo de', persona), field('Nota / lo que pides', nota)),
+      footer: [h('button', { class: 'btn', onclick: closeDrawer }, 'Cancelar'),
+      h('button', { class: 'btn primary', onclick: () => {
+        if (!persona.value) return toast('Elige a quién', 'error');
+        const prev = p.ejecutor || null;
+        const verbo = (yaTiene && persona.value === prev) ? 'Recordado a ' : 'Solicitado a ';
+        const txt = verbo + persona.value + (nota.value.trim() ? ': ' + nota.value.trim() : '');
+        H.agregarSeguimiento(p, txt);
+        if (persona.value !== prev) H.audit('pendiente', p.id, 'ejecutor', prev, persona.value);
+        H.actualizarPendiente(p, { tipo: p.tipo, estado: p.estado === 'no_iniciado' ? 'en_proceso' : p.estado, ejecutor: persona.value, desc: p.desc, fechaComp: p.fechaComp, proxRecord: H.addDias(H.hoyLocal(), DIAS_RECORD) });
+        toast(txt, 'success'); closeDrawer();
+      } }, yaTiene ? 'Guardar' : 'Delegar')]
+    });
+  }
+  // Seguimiento rápido: anota una nota con fecha de hoy y reinicia el reloj de 3 días.
+  function formSeguimiento(p) {
+    const eq = H.findEquipo(p.inv) || {};
+    const nota = h('textarea', { placeholder: 'Qué pasó / en qué va' });
+    openDrawer({
+      title: 'Seguimiento · ' + p.inv,
+      body: h('div', {}, eqMini(eq, p), field('Nota de seguimiento', nota),
+        h('div', { class: 'notice' }, 'Se anota con la fecha de hoy y reinicia el recordatorio de ' + DIAS_RECORD + ' días.')),
+      footer: [h('button', { class: 'btn', onclick: closeDrawer }, 'Cancelar'),
+      h('button', { class: 'btn primary', onclick: () => {
+        if (!nota.value.trim()) return toast('Escribe algo', 'error');
+        H.agregarSeguimiento(p, nota.value.trim());
+        H.actualizarPendiente(p, { tipo: p.tipo, estado: p.estado === 'no_iniciado' ? 'en_proceso' : p.estado, ejecutor: p.ejecutor, desc: p.desc, fechaComp: p.fechaComp, proxRecord: H.addDias(H.hoyLocal(), DIAS_RECORD) });
+        toast('Seguimiento anotado', 'success'); closeDrawer();
+      } }, 'Anotar')]
+    });
+  }
+
+  // ---- REPARTIR MP DEL MES (pantalla simple de asignación, solo cuando toca) --
+  VIEWS.repartir = function () {
+    const S = H.getState();
+    const km = `${YEAR}-${String(MONTH + 1).padStart(2, '0')}`;
+    S.asignacionesMP = S.asignacionesMP || {};
+    S.asignacionesMP[km] = S.asignacionesMP[km] || {};
+    const data = H.construirAsignacionMP(YEAR, MONTH);
+    const root = h('div', { class: 'home' });
+    root.appendChild(h('div', { class: 'home-hd' },
+      h('div', { style: { marginBottom: '8px', fontSize: '12.5px' } }, h('span', { class: 'link', onclick: () => go('inicio') }, '← Volver a Hoy')),
+      h('h1', {}, 'Repartir la MP de ' + MES_ESP(MONTH) + ' ' + YEAR),
+      h('div', { class: 'sub', style: { textTransform: 'none' } }, data.equipos.length + ' equipos programados. Asigna un responsable a cada uno.')));
+    if (!data.equipos.length) { root.appendChild(h('div', { class: 'home-empty' }, 'No hay equipos con MP programada este mes.')); return root; }
+
+    const progLine = h('div', { class: 'bh-sub' });
+    const refresh = () => { const asig = S.asignacionesMP[km]; const n = data.equipos.filter(e => asig[e.inv]).length; progLine.textContent = `${n} de ${data.equipos.length} asignados`; };
+    const bulkSel = selectEl([['', 'Asignar los que faltan a…'], ...EJECUTORES.map(x => [x, x])], '', { onchange: e => { const v = e.target.value; if (!v) return; const asig = S.asignacionesMP[km]; data.equipos.forEach(eq => { if (!asig[eq.inv]) asig[eq.inv] = v; }); H.save(); toast('Asignados los que faltaban a ' + v, 'success'); go('repartir'); } });
+    const bd = h('div', { class: 'block-bd' });
+    mount(bd, h('div', { class: 'rep-list' }, ...data.equipos.map(eq => {
+      const sel = selectEl([['', '— sin asignar —'], ...EJECUTORES.map(x => [x, x])], S.asignacionesMP[km][eq.inv] || '', { onchange: e => { const asig = S.asignacionesMP[km]; if (e.target.value) asig[eq.inv] = e.target.value; else delete asig[eq.inv]; H.save(); refresh(); } });
+      return h('div', { class: 'rep-row' },
+        h('div', { class: 'rep-eq' }, h('b', {}, eq.equipo || '—'), h('span', { class: 'mono faint', style: { marginLeft: '8px', fontSize: '12px' } }, eq.inv), h('div', { class: 'faint', style: { fontSize: '11.5px' } }, eq.servicio || '')),
+        h('div', { class: 'rep-sel' }, sel));
+    })));
+    refresh();
+    root.appendChild(h('div', { class: 'block' },
+      h('div', { class: 'block-hd', style: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' } },
+        h('div', { style: { flex: 1 } }, h('h2', {}, 'Equipos programados'), progLine),
+        field(null, bulkSel),
+        h('button', { class: 'btn', title: 'Descargar plantilla Excel para asignar fuera de línea', onclick: () => descargarPlantilla(YEAR, MONTH) }, svg(ic.dl, 14), 'Plantilla'),
+        h('button', { class: 'btn', title: 'Subir una plantilla con responsables', onclick: () => subirPlantilla(YEAR, MONTH) }, svg(ic.up, 14), 'Subir'),
+        h('button', { class: 'btn primary', onclick: () => { toast('Reparto guardado', 'success'); go('inicio'); } }, 'Terminar')),
+      bd));
+    return root;
+  };
+
+  // Menú "Más": todo lo que pasa a estar bajo demanda (vistas densas, exportes, ajustes).
+  function openMas(anchor) {
+    const themeNow = document.documentElement.getAttribute('data-theme');
+    const densNow = document.documentElement.getAttribute('data-density');
+    popover(anchor, [
+      ['Equipos', () => go('equipos')],
+      ['Tablero', () => go('tablero')],
+      ['Bitácora de eventos', () => go('eventos')],
+      ['Correctivos', () => go('ciclos')],
+      ['MP del mes (detalle)', () => go('asignaciones')],
+      ['Cumplimiento', () => go('cumplimiento')],
+      ['Cola de trabajo', () => go('cola')],
+      ['Exportar libro Excel', () => excelExport()],
+      ['Configuración', () => go('configuracion')],
+      [themeNow === 'dark' ? 'Tema claro' : 'Tema oscuro', () => applyTheme(themeNow === 'dark' ? 'light' : 'dark')],
+      [densNow === 'comodo' ? 'Vista compacta' : 'Vista cómoda', () => applyDensity(densNow === 'comodo' ? 'compacto' : 'comodo')]
+    ]);
+  }
+
   // ============================ chrome (rail/topbar) ========================
   const railNav = h('nav', { class: 'topnav' });
   const navItems = {};
@@ -2393,7 +2668,7 @@
     const v = (VIEWS[view] || VIEWS.inicio);
     const node = v();
     mount($('#view'), node);
-    const titles = { inicio: 'Cola de trabajo', equipos: 'Equipos', tablero: 'Tablero por estado', equipo: 'Ficha de equipo', pendientes: 'Pendientes', ciclos: 'Ciclos correctivos', eventos: 'Bitácora de eventos', asignaciones: 'MP del mes · detalle', cumplimiento: 'Cumplimiento por servicio', configuracion: 'Configuración' };
+    const titles = { inicio: 'Hoy', cola: 'Cola de trabajo', repartir: 'Repartir MP del mes', equipos: 'Equipos', tablero: 'Tablero por estado', equipo: 'Ficha de equipo', pendientes: 'Pendientes', ciclos: 'Ciclos correctivos', eventos: 'Bitácora de eventos', asignaciones: 'MP del mes · detalle', cumplimiento: 'Cumplimiento por servicio', configuracion: 'Configuración' };
     const t = titles[view] || 'Gestión Equipos Críticos HHHA';
     const tt = $('#tb-title'); if (tt) tt.textContent = t;
     document.title = 'Gestión Equipos Críticos HHHA' + (view === 'inicio' ? '' : ' · ' + t);
@@ -2428,23 +2703,19 @@
 
     const app = h('div', { class: 'app' },
       h('header', { class: 'topbar' },
-        h('div', { class: 'brand', title: 'Gestión Equipos Críticos HHHA' }, h('span', { class: 'mark' }, 'H'), h('span', { class: 'brand-name s-hide' }, 'HHHA')),
-        railNav,
+        h('div', { class: 'brand', title: 'SIGEM · Gestión de Equipos Críticos · ' + APP_VERSION, style: { cursor: 'pointer' }, onclick: () => go('inicio') }, h('span', { class: 'mark' }, 'S'), h('span', { class: 'brand-name s-hide' }, 'SIGEM')),
         h('div', { class: 'tb-spacer' }),
-        h('div', { class: 'search-pill', onclick: () => openCmdk() }, svg(ic.search, 15), h('span', { class: 'muted s-hide' }, 'Buscar…'), h('span', { class: 'kbd s-hide' }, '⌘K')),
-        h('span', { class: 'pill muted s-hide', id: 'state-ind', title: 'Cambios desde el arranque' }, '0 cambios'),
-        h('button', { class: 'btn icon ghost', id: 'btn-density', title: 'Densidad', onclick: () => applyDensity(document.documentElement.getAttribute('data-density') === 'comodo' ? 'compacto' : 'comodo') }, svg(ic.density, 16)),
+        h('div', { class: 'search-pill', onclick: () => openCmdk(), title: 'Buscar un equipo o acción' }, svg(ic.search, 15), h('span', { class: 'muted s-hide' }, 'Buscar equipo…'), h('span', { class: 'kbd s-hide' }, '⌘K')),
+        h('button', { class: 'btn ghost', title: 'Más vistas y opciones', onclick: ev => { ev.stopPropagation(); openMas(ev.currentTarget); } }, svg(ic.menu, 16), h('span', { class: 's-hide' }, 'Más')),
         h('button', { class: 'btn icon ghost', id: 'btn-theme', title: 'Tema', onclick: () => applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark') }),
-        h('button', { class: 'btn icon ghost s-hide', title: 'Exportar libro Excel', onclick: excelExport }, svg(ic.dl, 16)),
-        h('button', { class: 'btn icon ghost', title: 'Configuración', onclick: () => go('configuracion') }, svg(ic.config, 16)),
         h('span', { class: 'u-avatar', title: 'Cristian · ' + APP_VERSION }, 'C'),
+        h('span', { id: 'state-ind', style: { display: 'none' } }),
         h('span', { id: 'tb-title', style: { display: 'none' } })),
       h('main', { class: 'view', id: 'view' }));
     mount(document.getElementById('root'), app);
 
-    buildRail();
     applyTheme(localStorage.getItem('sigem_theme') || 'light');
-    applyDensity(localStorage.getItem('sigem_density') || 'compacto');
+    applyDensity(localStorage.getItem('sigem_density') || 'comodo');
     fromHash();
     renderView(); syncNav(); refreshChrome();
     setTimeout(recordatoriosAlAbrir, 600);

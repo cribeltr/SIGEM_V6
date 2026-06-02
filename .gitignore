@@ -1,0 +1,9 @@
+node_modules/
+package-lock.json
+.DS_Store
+*.xlsx
+# respaldos / exports de datos generados (no son fuente)
+hhhadata*.json
+hhha-data-*.json
+sigem-backup-*.json
+sigembackup*.json

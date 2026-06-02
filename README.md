@@ -45,6 +45,24 @@ npm run build      # o: node tools/build.js
 El build escribe **las dos copias idénticas** en una sola pasada (así nunca se
 desincronizan) y aborta si algún fragmento contiene `</script>`/`</style>`.
 
+## Pruebas (batería)
+
+La batería se ejecuta con `npm test` (build + las tres pruebas) y corre además en
+**CI** (GitHub Actions, `.github/workflows/ci.yml`) en cada *push* y *pull request*.
+Necesita `jsdom` (dev-dependency): `npm install` lo instala.
+
+| Comando | Qué valida |
+|---|---|
+| `npm run build` | Ensambla el archivo único y verifica que `app.html` == `apps-script/Index.html`. |
+| `npm run test:smoke` | Arranque en jsdom + navegación por las vistas sin error. |
+| `npm run test:flow` | **Auditoría del núcleo** (≥25 checks): MP por causal, anulación con reversión, ciclos, pendientes, baja, `corregirMP` e invariantes (IDs únicos, estado = recalculado). |
+| `npm run test:crawl` | **Click-crawler**: pulsa todos los controles de cada vista y de los drawers, con re-render entre clics → **0 errores**. |
+| `npm test` | Todo lo anterior en orden. |
+
+Además, CI comprueba que los artefactos generados estén **en sintonía con las
+fuentes** (un build limpio no produce diferencias): si editas `src/` o `ui/`,
+recuerda `npm run build` y commitear los `.html` regenerados.
+
 ## Despliegue (Google Sheets · opcional)
 
 La app funciona sola en el navegador. Para guardar los datos en un Google Sheet

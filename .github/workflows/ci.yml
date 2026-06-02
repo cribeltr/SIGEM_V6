@@ -1,0 +1,64 @@
+name: CI
+
+# Fase A del PLAN-REDISENO: la "regla de oro" automatizada — nada se integra si
+# la batería no está 100% verde y si el archivo único no es reproducible.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# Cancela ejecuciones antiguas del mismo ref cuando llega un push nuevo.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bateria:
+    name: Build + batería de pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias (jsdom)
+        run: npm install --no-audit --no-fund
+
+      - name: Sintaxis (node --check) de las fuentes
+        run: |
+          node --check src/hhha-core.js
+          node --check src/seed-data.js
+          node --check ui/app.js
+          node --check tools/build.js
+          node --check tools/smoke-test.js
+          node --check tools/flow-test.js
+          node --check tools/crawl-test.js
+
+      - name: Build del archivo único
+        run: node tools/build.js
+
+      - name: Artefactos idénticos (app.html == apps-script/Index.html)
+        run: cmp app.html apps-script/Index.html
+
+      - name: Build reproducible (artefactos en sintonía con las fuentes)
+        run: |
+          if ! git diff --quiet -- app.html apps-script/Index.html; then
+            echo "::error::app.html / apps-script/Index.html no coinciden con un build limpio."
+            echo "Ejecuta 'npm run build' y commitea los artefactos regenerados."
+            git --no-pager diff --stat -- app.html apps-script/Index.html
+            exit 1
+          fi
+
+      - name: Smoke test (arranque + navegación, jsdom)
+        run: node tools/smoke-test.js
+
+      - name: Auditoría de flujos del núcleo (≥25 checks)
+        run: node tools/flow-test.js
+
+      - name: Click-crawler quirúrgico (0 errores)
+        run: node tools/crawl-test.js

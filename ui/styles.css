@@ -520,3 +520,69 @@ table.dense thead th.sortable:hover { background: var(--surface-3); }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
+
+/* ============================================================================
+ * Interfaz simple (rediseño orientado al trabajo diario).
+ * Pantalla principal calmada: "Registrar" + "Pendientes". Pocas cosas por
+ * pantalla, jerarquía clara y aire. No toca el motor (src/), solo presentación.
+ * ==========================================================================*/
+
+/* Contenido un poco más aireado en todas las vistas. */
+.view { padding: 22px 18px 64px; }
+
+/* Columna central acotada para que el inicio respire. */
+.home { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.home-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.home-hd h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
+.home-date { color: var(--muted); font-size: 13.5px; text-transform: capitalize; }
+.home-sub { color: var(--muted); font-size: 13px; font-weight: 400; }
+
+/* Tarjetas grandes y suaves. */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; box-shadow: var(--shadow); }
+.card-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.card-hd h2 { margin: 0; font-size: 16.5px; font-weight: 650; letter-spacing: -.2px; }
+
+/* Tarea de inicio de mes (aparece solo cuando corresponde). */
+.task-card { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; font: inherit; cursor: pointer;
+  background: var(--accent-bg); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: 16px; padding: 16px 18px; transition: border-color .12s ease; }
+.task-card:hover { border-color: var(--accent); }
+.task-ic { color: var(--accent); display: grid; place-items: center; flex: 0 0 auto; }
+.task-tx { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.task-tx b { font-size: 14.5px; font-weight: 600; }
+.task-card .ico:last-child { color: var(--accent); opacity: .7; flex: 0 0 auto; }
+
+/* Botones grandes de "Registrar". */
+.reg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 12px; }
+.reg-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  min-height: 100px; padding: 16px 12px; font: inherit; font-size: 13.5px; font-weight: 550; line-height: 1.3;
+  color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 13px;
+  text-align: center; cursor: pointer; transition: background .12s ease, border-color .12s ease, color .12s ease; }
+.reg-btn:hover { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+.reg-ic { color: var(--accent); display: grid; place-items: center; }
+
+/* Lista de pendientes (calmada, una por fila). */
+.pend-list { display: flex; flex-direction: column; gap: 11px; }
+.pend { border: 1px solid var(--border); border-radius: 13px; background: var(--surface); overflow: hidden; }
+.pend.urge { border-color: color-mix(in srgb, var(--noop) 45%, var(--border)); }
+.pend-flag { background: var(--noop-bg); color: var(--noop); font-size: 12px; font-weight: 600; padding: 7px 15px; }
+.pend-body { display: flex; align-items: center; gap: 12px; padding: 14px 15px; }
+.pend-main { flex: 1; min-width: 0; cursor: pointer; }
+.pend-desc { font-size: 14px; font-weight: 550; margin-bottom: 3px; line-height: 1.35; }
+.pend-meta { color: var(--muted); font-size: 12.5px; }
+.pend-acts { display: flex; gap: 6px; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; }
+
+.count-pill { background: var(--surface-3); color: var(--muted); font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 10px; }
+.count-pill.urge { background: var(--noop); color: #fff; }
+.empty-calm { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
+
+/* Topbar más calmado y buscador prominente. */
+.topbar { height: 54px; gap: 10px; padding: 0 16px; }
+.brand .mark { width: 26px; height: 26px; }
+.search-pill { min-width: 240px; padding: 8px 13px; border-radius: 11px; font-size: 13.5px; }
+@media (max-width: 640px) {
+  .search-pill { min-width: 0; }
+  .search-pill .muted { display: none; }
+  .home-hd h1 { font-size: 22px; }
+  .card { padding: 18px; }
+}

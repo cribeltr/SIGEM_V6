@@ -61,7 +61,7 @@ jobs:
       - name: Auditoría de flujos del núcleo (≥25 checks)
         run: node tools/flow-test.js
 
-      - name: Aceptación del rediseño v2 (§5/§7)
+      - name: Aceptación de la interfaz simple
         run: node tools/redesign-test.js
 
       - name: Click-crawler quirúrgico (0 errores)

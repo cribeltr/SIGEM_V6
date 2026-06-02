@@ -56,8 +56,10 @@ Necesita `jsdom` (dev-dependency): `npm install` lo instala.
 | `npm run build` | Ensambla el archivo único y verifica que `app.html` == `apps-script/Index.html`. |
 | `npm run test:smoke` | Arranque en jsdom + navegación por las vistas sin error. |
 | `npm run test:flow` | **Auditoría del núcleo** (≥25 checks): MP por causal, anulación con reversión, ciclos, pendientes, baja, `corregirMP` e invariantes (IDs únicos, estado = recalculado). |
+| `npm run test:redesign` | **Aceptación de la interfaz simple**: inicio con bloques Registrar + Pendientes, regla de los 3 días, tarea de inicio de mes y que el motor (ficha, API) siga intacto. |
 | `npm run test:crawl` | **Click-crawler**: pulsa todos los controles de cada vista y de los drawers, con re-render entre clics → **0 errores**. |
-| `npm test` | Todo lo anterior en orden. |
+| `npm run test:visual` | **Gate anti-scroll** (Playwright/Chromium): mide que no haya scroll horizontal a 1366/1900px + capturas. Informativo en CI. |
+| `npm test` | Build + smoke + flow + interfaz + crawler. |
 
 Además, CI comprueba que los artefactos generados estén **en sintonía con las
 fuentes** (un build limpio no produce diferencias): si editas `src/` o `ui/`,

@@ -1,10 +1,20 @@
-# Gestión Equipos Críticos HHHA · UI (densa "pro")
+# Gestión Equipos Críticos HHHA · UI
 
-Interfaz **rediseñada desde cero** sobre el núcleo lógico `../src/hhha-core.js`.
-No reutiliza nada del diseño del archivo original: se generó **a partir de la
-lógica** (entidades, estados, operaciones) con una estética _power-user_ de alta
-densidad (estilo Linear / consolas de datos), inicio en **cola de trabajo** y
-**100% funcional** (crea/edita/anula y persiste en `localStorage`).
+> **Interfaz simplificada (rediseño orientado al trabajo diario).** El **inicio**
+> es ahora una sola pantalla calmada con dos bloques: **Registrar** (eventos del
+> día + cargar maestro) y **Pendientes** (lista priorizada con la *regla de los 3
+> días*: lo que lleva ≥3 días sin avance sube al tope como "Recuérdale a X"). En
+> inicio de mes aparece una tarea puntual para repartir las MP programadas. Todo
+> lo demás (ficha de equipo, tablero, cumplimiento, bitácora) **se abre por
+> búsqueda (⌘K) o el menú "Más"**, no al frente. Estilo simple, con aire.
+>
+> El cambio es **solo de presentación**: el motor (`../src/hhha-core.js`),
+> los datos y toda la funcionalidad se conservan intactos. Las secciones de abajo
+> describen las vistas secundarias (sin cambios), que se alcanzan a demanda.
+
+Interfaz sobre el núcleo lógico `../src/hhha-core.js`. Toda la lógica vive en el
+núcleo; la UI solo presenta y llama a `HHHA.*`. **100% funcional** (crea/edita/
+anula y persiste en `localStorage`).
 
 ## Cómo abrir
 Abre `ui/index.html` en el navegador (doble click o `file://`). No requiere

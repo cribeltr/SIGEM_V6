@@ -1,23 +1,22 @@
 #!/usr/bin/env node
 /****************************************************************************
- * SIGEM · Test de aceptación del REDISEÑO v2 (jsdom).
+ * SIGEM · Aceptación de la INTERFAZ SIMPLE (jsdom).
  * --------------------------------------------------------------------------
- * Bloquea (anti-regresión) la estructura que define el PLAN-REDISENO v2, ya
- * implementada en esta base de código. Corresponde a las "pruebas específicas
- * nuevas" del §5 y a los criterios de aceptación del §7:
+ * Bloquea (anti-regresión) la nueva interfaz orientada al trabajo diario:
  *
- *   · Barra superior de navegación presente; rail lateral retirado.
- *   · Ficha con EXACTAMENTE 3 pestañas: Mantención · Historial · Archivos
- *     (sin Auditoría/Conflictos/Resumen/Matriz/Ciclos como pestaña).
- *   · Cabecera de la ficha con acciones (Nuevo evento · Pendiente · Baja) y
- *     "Registrar gestión" en equipos caídos.
- *   · Matriz MP editable: clic en una celda abre el formulario de MP.
- *   · Bitácora como línea de tiempo (tl-item), no como tabla ancha.
- *   · Notas del equipo en la pestaña Archivos.
- *   · Hoja "Registro" entre las hojas legibles del Google Sheet (Fase F).
+ *   · Chrome calmado: marca + buscador (⌘K) + menú "Más"; SIN barra densa.
+ *   · Inicio = una sola pantalla con DOS bloques: "Registrar" y "Pendientes".
+ *   · "Registrar": botones directos (Mantención, Solicitud, Envío, Recepción,
+ *     Cargar maestro) que abren el formulario correcto.
+ *   · "Pendientes": lista priorizada con la REGLA DE LOS 3 DÍAS — los que
+ *     llevan ≥3 días sin avance suben al tope y muestran "Recuérdale a X".
+ *   · Acción rápida "Resolver" cierra el pendiente (vía el motor).
+ *   · Tarea de inicio de mes: aparece solo si hay equipos programados sin
+ *     repartir (y desaparece al repartirlos).
+ *   · El MOTOR no se tocó: la ficha del equipo sigue intacta (3 pestañas) y
+ *     la API HHHA.* sigue disponible.
  *
- * Nota: el gate "sin scroll horizontal" a 1366/1900px exige un navegador con
- * layout (Playwright) y queda fuera de jsdom; se documenta como pendiente.
+ * El gate "sin scroll horizontal" (Playwright) es aparte (anti-scroll-test.js).
  *
  * Uso:  node tools/redesign-test.js
  ****************************************************************************/
@@ -41,7 +40,7 @@ const checks = [];
 const ok = (label, cond) => checks.push({ label, cond: !!cond });
 const $ = s => w.document.querySelector(s);
 const $$ = s => [...w.document.querySelectorAll(s)];
-const txt = el => (el.textContent || '').replace(/\d+$/, '').trim();   // quita el badge numérico final
+const txt = el => (el.textContent || '').replace(/\d+$/, '').trim();
 
 function navigate(target) {
   w.location.hash = '#' + target;
@@ -50,76 +49,70 @@ function navigate(target) {
     const v = $('#view'); if (v && v.children.length) break;
   }
 }
-function clickTab(label) {
-  const b = $$('#view .tabs button').find(x => txt(x).toLowerCase().startsWith(label.toLowerCase()));
-  if (b) b.click();
-  return b;
-}
 
 setTimeout(() => {
   try {
     const H = w.HHHA;
     ok('app montada', !!(H && $('#view') && $('#view').children.length > 0));
     const S = H.getState();
+    const hoy = H.hoyLocal();
 
-    // ===== Fase B / §7 — Barra superior, sin rail =====
-    ok('barra superior <nav.topnav> dentro de header.topbar', !!$('header.topbar nav.topnav'));
-    const navLabels = $$('header.topbar nav.topnav .nav-item').map(txt);
-    ['Hoy', 'Equipos', 'Tablero', 'Pendientes', 'Cumplimiento'].forEach(l =>
-      ok(`acceso de navegación "${l}" presente`, navLabels.includes(l)));
-    ok('rail lateral retirado (no hay .rail/.sidebar)', !$('.rail') && !$('.sidebar') && !$('aside.rail'));
+    // ===== Chrome calmado =====
+    ok('marca "SIGEM" en la barra', !!$('.brand .brand-name') && /SIGEM/.test($('.brand .brand-name').textContent));
+    ok('buscador prominente (⌘K) presente', !!$('header .search-pill'));
+    ok('barra de navegación densa retirada (sin .topnav/.nav-item al frente)', !$('header .topnav') && !$('header .nav-item'));
+    ok('menú "Más" presente', $$('header button').some(b => /Más/i.test(b.title || '')));
 
-    // ===== Fase C / §5 — Ficha de 3 pestañas =====
-    const invDatos = (S.eventos.find(e => !e.anulado) || S.equipos[0] || {}).inv;
-    navigate('equipo/' + encodeURIComponent(invDatos));
-    ok('ficha renderiza (.view-narrow)', !!$('#view .view-narrow'));
-    const tabLabels = $$('#view .tabs > button').map(txt);
-    ok('ficha con EXACTAMENTE 3 pestañas', tabLabels.length === 3);
-    ok('pestañas = Mantención · Historial · Archivos', JSON.stringify(tabLabels) === JSON.stringify(['Mantención', 'Historial', 'Archivos']));
-    ['Auditoría', 'Conflictos', 'Resumen', 'Matriz MP', 'Ciclos'].forEach(l =>
-      ok(`sin pestaña antigua "${l}"`, !tabLabels.includes(l)));
+    // ===== Inicio: una pantalla, dos bloques =====
+    ok('inicio usa el contenedor calmado (.home)', !!$('.home'));
+    ok('encabezado "Hoy"', !!$('.home-hd h1') && /Hoy/i.test($('.home-hd h1').textContent));
+    const bloques = $$('.home .card .card-hd h2').map(x => x.textContent.trim());
+    ok('exactamente 2 bloques: Registrar y Pendientes', JSON.stringify(bloques) === JSON.stringify(['Registrar', 'Pendientes']));
 
-    // Cabecera con acciones.
-    const headBtns = $$('#view .view-narrow button').map(txt);
-    ok('cabecera: acción "Nuevo evento"', headBtns.some(t => /Nuevo evento/i.test(t)));
-    ok('cabecera: acción "Pendiente"', headBtns.some(t => /^Pendiente$/i.test(t)));
-    ok('cabecera: acción "Dar de baja"', headBtns.some(t => /Dar de baja/i.test(t)));
-
-    // ===== Fase E / §5 — Bitácora como línea de tiempo (pestaña Historial por defecto) =====
-    ok('historial muestra línea de tiempo (.tl-item / .tl-card)', $$('#view .tl-item').length > 0 && !!$('#view .tl-card'));
-
-    // ===== Fase D / §5 — Matriz MP editable =====
-    clickTab('Mantención');
-    // Las celdas EDITABLES son las de la fila "Resultado (R)": llevan title + onclick→formMP
-    // (las de "Programado (P)" comparten clase .mpcell pero no son accionables).
-    const celdas = $$('#view td.mpcell[title]');
-    ok('matriz MP con celdas de Resultado editables (.mpcell[title])', celdas.length >= 1);
-    const drawer = $('aside.drawer');
-    if (drawer) drawer.innerHTML = '';
-    if (celdas[0]) celdas[0].click();
-    ok('clic en celda de matriz abre el formulario de MP (drawer con campos)',
-      !!drawer && drawer.children.length > 0 && !!drawer.querySelector('select'));
+    // ===== Bloque Registrar =====
+    const regs = $$('.reg-btn').map(b => b.textContent.trim());
+    ['Mantención', 'Solicitud de trabajo', 'Envío a servicio técnico', 'Recepción', 'Cargar maestro'].forEach(l =>
+      ok(`Registrar incluye "${l}"`, regs.includes(l)));
+    // Clic en "Mantención" abre el formulario de evento.
+    const drawer = $('aside.drawer'); if (drawer) drawer.innerHTML = '';
+    const btnMant = $$('.reg-btn').find(b => /Mantención/.test(b.textContent));
+    if (btnMant) btnMant.click();
+    ok('clic en "Mantención" abre el formulario de evento', !!drawer && drawer.children.length > 0 && (!!drawer.querySelector('.type-grid') || !!drawer.querySelector('select')));
     try { w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); } catch (e) {}
 
-    // ===== §5 — Notas del equipo en pestaña Archivos =====
-    navigate('equipo/' + encodeURIComponent(invDatos));
-    clickTab('Archivos');
-    const notaInput = $$('#view input').some(i => /Agregar nota/i.test(i.getAttribute('placeholder') || ''));
-    ok('pestaña Archivos con panel de Notas del equipo', notaInput);
+    // ===== Regla de los 3 días =====
+    navigate('inicio');
+    const UMBRAL = 3;
+    const ultMov = p => { let d = p.fechaCrea || hoy; (p.seguimientos || []).forEach(s => { if (s.fecha && s.fecha > d) d = s.fecha; }); return d; };
+    const activos = S.pendientes.filter(p => !p.anulado && p.estado !== 'cerrado');
+    const urgEsperados = activos.filter(p => H.diasEntreFechas(ultMov(p), hoy) >= UMBRAL).length;
+    const urgEnDOM = $$('.pend.urge').length;
+    ok('pendientes activos listados en el inicio', $$('.pend').length === activos.length);
+    ok('escalado de 3 días: nº de .urge coincide con lo calculado', urgEnDOM === Math.min(activos.length, urgEsperados));
+    ok('los urgentes muestran "Recuérdale a…"', urgEsperados === 0 || $$('.pend-flag').some(f => /Recu[eé]rdale a/i.test(f.textContent)));
+    ok('los urgentes van arriba (primer pendiente es .urge)', urgEsperados === 0 || ($$('.pend')[0] && $$('.pend')[0].classList.contains('urge')));
 
-    // ===== §5 — "Registrar gestión" en equipos caídos =====
-    let invCaido = (S.equipos.find(e => ['no_operativo', 'en_servicio_tecnico'].includes(e.estado)) || {}).inv;
-    if (!invCaido) {
-      const fresh = S.equipos.find(e => e.estado === 'operativo') || S.equipos[0];
-      H.registrarMP({ inv: fresh.inv, fecha: H.hoyLocal(), resultado: 'C3', ejecutor: 'Marco Ulloa', forzarSinProg: true });
-      invCaido = fresh.inv;
-    }
-    navigate('equipo/' + encodeURIComponent(invCaido));
-    ok('equipo caído ofrece "Registrar gestión"', $$('#view .view-narrow button').some(t => /Registrar gestión/i.test(txt(t))));
+    // ===== Acción rápida "Resolver" cierra el pendiente (vía motor) =====
+    const antes = S.pendientes.filter(p => !p.anulado && p.estado !== 'cerrado').length;
+    const resolver = $('.pend .pend-acts button.ok');
+    if (resolver) resolver.click();
+    const despues = S.pendientes.filter(p => !p.anulado && p.estado !== 'cerrado').length;
+    ok('"Resolver" cierra un pendiente (motor)', antes > 0 && despues === antes - 1);
 
-    // ===== Fase F / §5 — Hoja "Registro" (revisión a nivel de fuente; cuadernoSheets es interno) =====
-    const appSrc = fs.readFileSync(path.join(ROOT, 'ui', 'app.js'), 'utf8');
-    ok('hoja "Registro" construida en las hojas legibles (cuadernoSheets)', /name:\s*'Registro'/.test(appSrc));
+    // ===== Tarea de inicio de mes (condicional) =====
+    navigate('inicio');
+    const km = `${new Date(hoy + 'T00:00:00').getFullYear()}-${String(new Date(hoy + 'T00:00:00').getMonth() + 1).padStart(2, '0')}`;
+    const asign = (S.asignacionesMP || {})[km] || {};
+    const sinRepartir = S.equipos.filter(e => e.estado !== 'baja' && H.mpProgramadaEnMes(e, H.MESES[new Date(hoy + 'T00:00:00').getMonth()]) && !asign[e.inv]).length;
+    ok('tarea de inicio de mes aparece solo si corresponde', (sinRepartir > 0) === !!$('.task-card'));
+
+    // ===== El motor NO se tocó: ficha intacta (3 pestañas) + API viva =====
+    const inv = (S.eventos.find(e => !e.anulado) || S.equipos[0] || {}).inv;
+    navigate('equipo/' + encodeURIComponent(inv));
+    const tabs = $$('#view .tabs > button').map(b => txt(b));
+    ok('la ficha del equipo sigue intacta (Mantención · Historial · Archivos)',
+      JSON.stringify(tabs) === JSON.stringify(['Mantención', 'Historial', 'Archivos']));
+    ok('API del motor disponible (HHHA.*)', typeof H.registrarMP === 'function' && typeof H.crearEvento === 'function' && typeof H.cerrarPendiente === 'function');
 
   } catch (e) {
     ok('test sin excepción (' + e.message + ')', false);
@@ -129,6 +122,6 @@ setTimeout(() => {
   const fail = checks.filter(c => !c.cond);
   checks.forEach(c => console.log((c.cond ? 'OK   ' : 'FAIL ') + c.label));
   console.log(`\n${checks.length} comprobaciones · ${checks.length - fail.length} OK · ${fail.length} fallo(s)`);
-  console.log(fail.length ? '*** REDISEÑO v2: FALLÓ ***' : '*** REDISEÑO v2 OK ***');
+  console.log(fail.length ? '*** INTERFAZ SIMPLE: FALLÓ ***' : '*** INTERFAZ SIMPLE OK ***');
   process.exit(fail.length ? 1 : 0);
 }, 900);

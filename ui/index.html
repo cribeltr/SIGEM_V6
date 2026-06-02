@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión Equipos Críticos HHHA</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- evita parpadeo de tema antes de pintar -->
+  <script>try { document.documentElement.setAttribute('data-theme', localStorage.getItem('sigem_theme') || 'light'); } catch (e) {}</script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Compresión de persistencia (lo detecta hhha-core como ENV.compressor) -->
+  <script src="vendor/lz-string.min.js"></script>
+  <!-- Datos semilla (window.SEED) -->
+  <script src="../src/seed-data.js"></script>
+  <!-- Núcleo lógico (window.HHHA) — SIN vistas -->
+  <script src="../src/hhha-core.js"></script>
+  <!-- Excel (SheetJS) local: la app es 100% offline. Habilita conciliación y export Excel -->
+  <script src="vendor/xlsx.full.min.js"
+          onload="window.HHHA && HHHA.configure({env:{xlsx:window.XLSX}})"
+          onerror="console.warn('XLSX no cargó: conciliación/Excel deshabilitados')"></script>
+  <!-- Capa de vistas nueva -->
+  <script src="app.js"></script>
+</body>
+</html>

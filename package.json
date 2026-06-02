@@ -9,7 +9,8 @@
     "test:smoke": "node tools/smoke-test.js",
     "test:flow": "node tools/flow-test.js",
     "test:crawl": "node tools/crawl-test.js",
-    "test": "node tools/build.js && node tools/smoke-test.js && node tools/flow-test.js && node tools/crawl-test.js",
+    "test:redesign": "node tools/redesign-test.js",
+    "test": "node tools/build.js && node tools/smoke-test.js && node tools/flow-test.js && node tools/redesign-test.js && node tools/crawl-test.js",
     "start": "node tools/build.js && echo \"Abre app.html en el navegador\""
   },
   "devDependencies": {

@@ -63,10 +63,14 @@ Carga: `lz-string` → `../src/seed-data.js` → `../src/hhha-core.js` → `xlsx
   - **Correctivos por etapa** (Solicitud → Visita → O. Compra → Envío → Recepción →
     Reparación): cada tarjeta es un ciclo abierto en su fase actual; arrastrarla a una etapa
     abre ese evento. Ves el pipeline de reparaciones de un vistazo.
-- **Equipo (ficha)** — cabecera con estado + datos; pestañas **Resumen · Matriz MP ·
-  Bitácora · Ciclos · Pendientes · Conflictos**. Acciones: MP rápida, nuevo evento,
-  pendiente, dar de baja. La **Matriz MP** es editable por celda (click → registra MP)
-  e incluye una fila **Responsable** para asignar quién hace la MP de cada mes.
+- **Equipo (ficha)** — cabecera con estado + días + última gestión + acciones (Nuevo
+  evento · Registrar gestión · Pendiente · Dar de baja) y **3 pestañas**:
+  **① Mantención** (Matriz MP **editable por celda**: clic en la fila *Resultado*
+  registra/edita la MP del mes y recalcula; fila **Responsable** por mes),
+  **② Historial** (ciclo correctivo + pendientes + **bitácora como línea de tiempo**,
+  clic = editar) y **③ Archivos** (adjuntos en Drive + **Notas** del equipo). Los
+  **conflictos** con el maestro ya no son pestaña: aparecen como aviso resoluble solo
+  si existen, y la **auditoría** se trasladó a Configuración ("Historial de cambios").
 - **Pendientes** — tabla por estado (activos/no iniciado/en proceso/resueltos), drawer
   con tareas atómicas y seguimientos.
 - **Eventos** — bitácora global con selector **Bitácora · Correctivos**: la
@@ -148,16 +152,16 @@ Funciones para gestionar, no solo registrar:
 - **Indicadores por responsable** (en *Cumplimiento*, modo *Por responsable*):
   pendientes abiertos, vencidos, MP ejecutadas (mes/año), eventos del año y
   equipos a cargo; clic → pendientes del responsable. Exportable.
-- **Notas / observaciones por equipo**: panel en la ficha (Resumen) para agregar
-  notas libres con autor y fecha (historial), auditadas.
-- **Filtro por rango de fechas** (Desde / Hasta) en **Bitácora** (+ Exportar) y en
-  la pestaña **Auditoría** de la ficha.
+- **Notas / observaciones por equipo**: panel en la ficha (pestaña **Archivos**) para
+  agregar notas libres con autor y fecha (historial), auditadas.
+- **Filtro por rango de fechas** (Desde / Hasta) en **Bitácora** (+ Exportar) y en el
+  **Historial de cambios** (auditoría) accesible desde Configuración.
 
 - **Recordatorios automáticos al abrir**: al cargar la app avisa (toast con acceso
   directo) de *pendientes vencidos* y *recordatorios para hoy* (`proxRecord`).
-- **Auditoría por equipo**: pestaña *Auditoría* en la ficha con el **historial de
-  cambios** (equipo, eventos, pendientes, tareas y ciclos): fecha/hora, campo,
-  antes → después y usuario.
+- **Auditoría (historial de cambios)**: accesible desde **Configuración** (botón
+  *Historial de cambios*) con los cambios de equipos, eventos, pendientes, tareas y
+  ciclos: fecha/hora, campo, antes → después y usuario.
 - **Cumplimiento por servicio** (vista nueva en el menú): tabla por servicio con
   equipos, estado (op/no-op/ST), **% operativo**, **MP del mes (ej/prog)**,
   **% cumplimiento MP** con barra, **MP atrasadas** y pendientes, con fila TOTAL,
@@ -234,6 +238,8 @@ faltaba** en la UI, sin cambiar el diseño:
 ## Notas
 - Mismo `STORAGE_KEY` que el núcleo (`hhha_v1_data`): comparte datos con cualquier
   app que use este motor.
-- Sin dependencias de build: HTML/CSS/JS plano. Verificado headless (jsdom): arranque,
-  las 8 vistas, las 6 pestañas de ficha, command palette, drawers que escriben en el
-  estado, export Excel y conciliación con SheetJS — 23/23 sin errores.
+- Sin dependencias de build: HTML/CSS/JS plano. Verificado headless (jsdom) por la
+  batería del repo (`npm test`): arranque y navegación, las **3 pestañas** de la ficha,
+  command palette, drawers que escriben en el estado, export Excel y conciliación con
+  SheetJS, más la auditoría de flujos del núcleo y un click-crawler con 0 errores.
+  Detalle de las pruebas: README raíz, sección "Pruebas (batería)".

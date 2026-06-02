@@ -37,6 +37,7 @@ jobs:
           node --check tools/build.js
           node --check tools/smoke-test.js
           node --check tools/flow-test.js
+          node --check tools/redesign-test.js
           node --check tools/crawl-test.js
 
       - name: Build del archivo único
@@ -59,6 +60,9 @@ jobs:
 
       - name: Auditoría de flujos del núcleo (≥25 checks)
         run: node tools/flow-test.js
+
+      - name: Aceptación del rediseño v2 (§5/§7)
+        run: node tools/redesign-test.js
 
       - name: Click-crawler quirúrgico (0 errores)
         run: node tools/crawl-test.js

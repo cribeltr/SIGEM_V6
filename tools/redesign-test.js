@@ -114,6 +114,16 @@ setTimeout(() => {
       JSON.stringify(tabs) === JSON.stringify(['Mantención', 'Historial', 'Archivos']));
     ok('API del motor disponible (HHHA.*)', typeof H.registrarMP === 'function' && typeof H.crearEvento === 'function' && typeof H.cerrarPendiente === 'function');
 
+    // ===== Función propia de esta versión PRESERVADA: Contactos del servicio + actividad =====
+    ok('motor con Contactos y registro de actividad', typeof H.getContactos === 'function' && typeof H.logActividad === 'function');
+    navigate('equipo/' + encodeURIComponent(inv));
+    const tabArch = $$('#view .tabs > button').find(b => /Archivos/.test(b.textContent));
+    if (tabArch) tabArch.click();
+    ok('Contactos del servicio visible en la ficha (pestaña Archivos)', /Contactos del servicio/.test(($('#view') || {}).textContent || ''));
+    navigate('configuracion');
+    ok('Configuración gestiona Contactos del servicio', /Contactos del servicio/.test(($('#view') || {}).textContent || ''));
+    ok('Configuración ofrece "Registro de actividad"', $$('#view button').some(b => /Registro de actividad/.test(b.textContent)));
+
   } catch (e) {
     ok('test sin excepción (' + e.message + ')', false);
     if (process.env.DEBUG) console.error(e);

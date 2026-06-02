@@ -48,6 +48,7 @@
     moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', menu: 'M3 6h18M3 12h18M3 18h18',
     dl: 'M12 3v12m0 0l4-4m-4 4l-4-4M4 21h16', up: 'M12 21V9m0 0l4 4m-4-4l-4 4M4 3h16',
     x: 'M6 6l12 12M18 6L6 18', chev: 'M9 6l6 6-6 6', dots: 'M12 5h.01M12 12h.01M12 19h.01',
+    users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
     funnel: 'M22 3H2l8 9.46V19l4 2v-8.54L22 3z'
   };
   function svg(d, w) { return h('span', { class: 'ico', html: `<svg width="${w || 17}" height="${w || 17}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${d.split('M').filter(Boolean).map(p => `<path d="M${p}"/>`).join('')}</svg>` }); }
@@ -57,6 +58,7 @@
   const fmtFecha = H.fmtFecha;
   const NOW = new Date(); const YEAR = NOW.getFullYear(); const MONTH = NOW.getMonth();
   const APP_VERSION = '2026-06-02 · v2.0';   // sello de build visible (barra superior y Configuración) para confirmar despliegue
+  const SESION = new Date().toISOString().slice(0, 19).replace('T', ' ');   // id de sesión (para medir uso/tiempos)
   const ESTADO_CLS = { operativo: 'op', no_operativo: 'noop', en_servicio_tecnico: 'st', baja: 'baja', desconocido: 'desc' };
 
   function estadoPill(estado) {
@@ -695,13 +697,29 @@
     render();
     return h('div', { class: 'section' }, h('div', { class: 's-hd' }, h('h3', {}, 'Bitácora'), sub, h('div', { class: 'tb-spacer' }), chk), body);
   }
-  // === Pestaña ARCHIVOS: adjuntos en Drive + notas del equipo ===
+  // === Pestaña ARCHIVOS: adjuntos en Drive + notas + contactos del servicio ===
   function tabArchivos(eq) {
-    return h('div', { class: 'hsplit', style: { flexWrap: 'wrap', alignItems: 'flex-start' } },
-      h('div', { class: 'section', style: { flex: '1', minWidth: '300px' } },
-        h('div', { class: 's-hd' }, svg(ic.dl, 15), h('h3', {}, 'Archivos del equipo'), h('span', { class: 's-sub' }, (eq.adjuntos || []).length || '')),
-        h('div', { class: 's-bd' }, adjuntosBox(eq, eq.inv))),
-      h('div', { style: { flex: '1', minWidth: '300px' } }, notasPanel(eq)));
+    return h('div', {},
+      contactosPanel(eq),
+      h('div', { class: 'hsplit', style: { flexWrap: 'wrap', alignItems: 'flex-start' } },
+        h('div', { class: 'section', style: { flex: '1', minWidth: '300px' } },
+          h('div', { class: 's-hd' }, svg(ic.dl, 15), h('h3', {}, 'Archivos del equipo'), h('span', { class: 's-sub' }, (eq.adjuntos || []).length || '')),
+          h('div', { class: 's-bd' }, adjuntosBox(eq, eq.inv))),
+        h('div', { style: { flex: '1', minWidth: '300px' } }, notasPanel(eq))));
+  }
+  // Contactos vinculados al servicio del equipo (los del servicio + los generales).
+  function contactosPanel(eq) {
+    const list = H.contactosDeServicio(eq.servicio).filter(c => c.nombre || c.apellido || c.correo || c.anexo);
+    return h('div', { class: 'section' },
+      h('div', { class: 's-hd' }, svg(ic.users, 15), h('h3', {}, 'Contactos del servicio'), h('span', { class: 's-sub' }, eq.servicio || '—')),
+      h('div', { class: 's-bd' }, list.length
+        ? h('div', { class: 'row-list' }, ...list.map(c => h('div', { class: 'mini-row', style: { alignItems: 'baseline', flexWrap: 'wrap', gap: '8px' } },
+          h('b', { style: { minWidth: '170px' } }, [c.nombre, c.apellido].filter(Boolean).join(' ') || '—'),
+          h('span', { class: 'tag' }, c.cargo || '—'),
+          c.servicio ? h('span', { class: 'faint', style: { fontSize: '11px' } }, c.servicio) : h('span', { class: 'faint', style: { fontSize: '11px' } }, 'general'),
+          c.anexo ? h('span', { class: 'faint', style: { fontSize: '11.5px' } }, 'anexo ' + c.anexo) : null,
+          c.correo ? h('a', { href: 'mailto:' + c.correo, style: { color: 'var(--accent)', fontSize: '11.5px' } }, c.correo) : null)))
+        : h('div', { class: 'faint', style: { fontSize: '11.5px' } }, 'Sin contactos para este servicio. Agrégalos en Configuración → Contactos del servicio.')));
   }
   function notasPanel(eq) {
     const box = h('div', {});
@@ -768,7 +786,7 @@
   function formHistorialCambios() {
     const S = H.getState();
     const all = (S.audit || []).slice().sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
-    const ENT = { equipo: 'Equipo', evento: 'Evento', pendiente: 'Pendiente', tarea: 'Tarea', ciclo: 'Ciclo' };
+    const ENT = { equipo: 'Equipo', evento: 'Evento', pendiente: 'Pendiente', tarea: 'Tarea', ciclo: 'Ciclo', contacto: 'Contacto' };
     const fhora = ts => { if (!ts) return '—'; const d = new Date(ts); return isNaN(d) ? ts : d.toLocaleString('es-CL'); };
     const v = x => (x === null || x === undefined || x === '') ? '—' : (x === false ? 'No' : x === true ? 'Sí' : String(x));
     let q = '', desde = '', hasta = '';
@@ -799,6 +817,31 @@
           h('span', { class: 'faint', style: { fontSize: '11px' } }, 'Hasta'), h('input', { type: 'date', style: { width: 'auto' }, onchange: e => { hasta = e.target.value; render(); } }),
           h('div', { class: 'tb-spacer' }), cnt),
         body),
+      footer: [h('button', { class: 'btn', onclick: closeDrawer }, 'Cerrar')]
+    });
+  }
+  // Registro de actividad: todos los clics grabados. Acceso desde Configuración.
+  function formActividad() {
+    const all = H.getActividad().slice().reverse();   // más reciente primero
+    let q = '';
+    const body = h('div', {}); const cnt = h('span', { class: 's-sub' });
+    const fhora = ts => { if (!ts) return '—'; const d = new Date(ts); return isNaN(d) ? ts : d.toLocaleString('es-CL'); };
+    function render() {
+      const ql = q.trim().toLowerCase();
+      const list = all.filter(a => !ql || [a.vista, a.inv, a.accion, a.cat].map(x => String(x || '')).join(' ').toLowerCase().includes(ql));
+      const sesiones = new Set(all.map(a => a.sesion).filter(Boolean)).size;
+      cnt.textContent = `${list.length} de ${all.length} clics · ${sesiones} sesión(es)`;
+      mount(body, list.length ? h('div', { class: 'tbl-wrap' }, h('table', { class: 'dense' },
+        h('thead', {}, h('tr', {}, h('th', {}, 'Fecha y hora'), h('th', {}, 'Vista'), h('th', {}, 'Categoría'), h('th', {}, 'N° Inv.'), h('th', {}, 'Acción'))),
+        h('tbody', {}, ...list.slice(0, 1500).map(a => h('tr', {},
+          h('td', { class: 'muted nowrap' }, fhora(a.ts)), h('td', {}, capCell(110, a.vista || '—')),
+          h('td', {}, h('span', { class: 'tag' }, a.cat || 'acción')),
+          h('td', { class: 'mono' }, a.inv || '—'), h('td', {}, capCell(340, a.accion || '—'))))))) : h('div', { class: 'empty' }, 'Sin actividad registrada todavía'));
+    }
+    render();
+    openDrawer({
+      title: 'Registro de actividad', wide: true,
+      body: h('div', {}, h('div', { class: 'filterbar' }, h('input', { type: 'search', placeholder: 'Buscar…', oninput: e => { q = e.target.value; render(); } }), h('div', { class: 'tb-spacer' }), cnt), body),
       footer: [h('button', { class: 'btn', onclick: closeDrawer }, 'Cerrar')]
     });
   }
@@ -1775,6 +1818,55 @@
   }
 
   // Hojas de trabajo legibles que se escriben en el Google Sheet (para usar el
+  // Resumen de uso para evaluar la aplicación en la planilla: clics, sesiones,
+  // tiempos por vista, acciones más usadas, por día y por hora. Devuelve AoA.
+  function resumenUso(actividad) {
+    const A = (actividad || []).filter(a => a && a.ts).slice().sort((a, b) => (a.ts || '').localeCompare(b.ts || ''));
+    if (!A.length) return [['USO DE LA APLICACIÓN'], [], ['Sin actividad registrada todavía. Usa la app y vuelve a sincronizar.']];
+    const CAP = 300; // s: huecos mayores se consideran inactividad (no se suman al tiempo de la vista)
+    const porVista = {}, porCat = {}, porAccion = {}, porDia = {}, porHora = {}, ses = {};
+    let prev = null;
+    A.forEach(a => {
+      const d = new Date(a.ts); if (isNaN(d)) return;
+      const v = a.vista || '—'; (porVista[v] = porVista[v] || { n: 0, seg: 0 }).n++;
+      porCat[a.cat || 'acción'] = (porCat[a.cat || 'acción'] || 0) + 1;
+      porAccion[a.accion || '—'] = (porAccion[a.accion || '—'] || 0) + 1;
+      porDia[a.ts.slice(0, 10)] = (porDia[a.ts.slice(0, 10)] || 0) + 1;
+      porHora[d.getHours()] = (porHora[d.getHours()] || 0) + 1;
+      const sid = a.sesion || '(sin sesión)'; const s = ses[sid] = ses[sid] || { ini: a.ts, fin: a.ts, n: 0 };
+      s.n++; if (a.ts > s.fin) s.fin = a.ts; if (a.ts < s.ini) s.ini = a.ts;
+      if (prev && prev.sesion === a.sesion) { let dt = (d - new Date(prev.ts)) / 1000; if (dt > 0) porVista[prev.vista || '—'].seg += Math.min(dt, CAP); }
+      prev = a;
+    });
+    const fmtT = s => s == null ? '—' : (s >= 3600 ? (s / 3600).toFixed(1) + ' h' : s >= 60 ? (s / 60).toFixed(1) + ' min' : Math.round(s) + ' s');
+    const fH = ts => { const d = new Date(ts); return isNaN(d) ? ts : d.toLocaleString('es-CL'); };
+    const sesArr = Object.keys(ses).map(k => ({ id: k, dur: (new Date(ses[k].fin) - new Date(ses[k].ini)) / 1000, n: ses[k].n }));
+    const durs = sesArr.map(s => s.dur).sort((a, b) => a - b);
+    const prom = durs.length ? durs.reduce((m, x) => m + x, 0) / durs.length : 0;
+    const med = durs.length ? durs[Math.floor((durs.length - 1) / 2)] : 0;
+    const top = (obj, n) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n);
+    const rows = [];
+    rows.push(['USO DE LA APLICACIÓN · resumen automático para evaluar el uso']);
+    rows.push(['Generado', new Date().toLocaleString('es-CL')]);
+    rows.push(['Periodo', fH(A[0].ts) + '  →  ' + fH(A[A.length - 1].ts)]);
+    rows.push(['Total de clics', A.length], ['Sesiones', sesArr.length], ['Días activos', Object.keys(porDia).length]);
+    rows.push(['Clics por sesión (promedio)', sesArr.length ? +(A.length / sesArr.length).toFixed(1) : 0]);
+    rows.push(['Duración de sesión · promedio', fmtT(prom)], ['Duración de sesión · mediana', fmtT(med)]);
+    rows.push([], ['CLICS Y TIEMPO POR VISTA'], ['Vista', 'Clics', 'Tiempo activo aprox.']);
+    Object.keys(porVista).sort((a, b) => porVista[b].n - porVista[a].n).forEach(k => rows.push([k, porVista[k].n, fmtT(porVista[k].seg)]));
+    rows.push([], ['CLICS POR CATEGORÍA'], ['Categoría', 'Clics']);
+    top(porCat, 20).forEach(([k, v]) => rows.push([k, v]));
+    rows.push([], ['ACCIONES MÁS USADAS (top 15)'], ['Acción', 'Veces']);
+    top(porAccion, 15).forEach(([k, v]) => rows.push([k, v]));
+    rows.push([], ['CLICS POR DÍA'], ['Día', 'Clics']);
+    Object.keys(porDia).sort().forEach(k => rows.push([k, porDia[k]]));
+    rows.push([], ['CLICS POR HORA DEL DÍA'], ['Hora', 'Clics']);
+    for (let hh = 0; hh < 24; hh++) if (porHora[hh]) rows.push([String(hh).padStart(2, '0') + ':00', porHora[hh]]);
+    rows.push([], ['DURACIÓN DE CADA SESIÓN'], ['Sesión', 'Clics', 'Duración']);
+    sesArr.sort((a, b) => a.id.localeCompare(b.id)).slice(-50).forEach(s => rows.push([s.id, s.n, fmtT(s.dur)]));
+    return rows;
+  }
+
   // archivo sin la app). Devuelve [{name, rows(AOA), hidden, headerRow}].
   function cuadernoSheets() {
     const S = H.getState(); const hoy = H.hoyLocal();
@@ -1790,7 +1882,7 @@
     sheets.push({
       name: 'Inicio', hidden: false, headerRow: 0, rows: [
         ['Gestión Equipos Críticos HHHA · Datos sincronizados desde la aplicación'], ['Actualizado', hoy], [],
-        ['Hojas de datos: Inventario · Pendientes · Tareas · Tareas-Pendientes (relación) · Bitácora · Registro (por fecha/hora de creación) · Equipos en servicio técnico · Equipos no operativos.'],
+        ['Hojas de datos: Inventario · Pendientes · Tareas · Tareas-Pendientes (relación) · Bitácora · Registro (por fecha/hora de creación) · Equipos en servicio técnico · Equipos no operativos · Contactos · Actividad.'],
         ['ID_EQUIPO es un correlativo estable de Inventario. La unión entre hojas se hace por "N° Inv." (= "N° Inventario" de Inventario).'],
         ['Tareas-Pendientes une ID_PENDIENTE con ID_TAREAS.'],
         ['Las hojas de sistema (empiezan con "_") están ocultas: guardan el estado. No las borres ni edites.'], [],
@@ -1862,6 +1954,33 @@
     });
     sheets.push({ name: 'Equipos en servicio técnico', hidden: false, rows: [colsEstado, ...filasEstado('en_servicio_tecnico')] });
     sheets.push({ name: 'Equipos no operativos', hidden: false, rows: [colsEstado, ...filasEstado('no_operativo')] });
+
+    // CONTACTOS del servicio (vinculados al servicio clínico)
+    sheets.push({
+      name: 'Contactos', hidden: false, rows: [
+        ['Servicio', 'Cargo', 'Nombre', 'Apellido', 'Anexo', 'Correo electrónico'],
+        ...H.getContactos().map(c => [c.servicio || '(todos)', c.cargo || '', c.nombre || '', c.apellido || '', c.anexo || '', c.correo || ''])
+      ]
+    });
+
+    // ACTIVIDAD — registro de uso (clics) con sesión, categoría y Δ de tiempo.
+    const actAll = H.getActividad();
+    const prevTs = {};
+    const actRows = actAll.map(a => {
+      let delta = '';
+      if (a.sesion && prevTs[a.sesion]) { const dt = (new Date(a.ts) - new Date(prevTs[a.sesion])) / 1000; if (isFinite(dt) && dt >= 0) delta = Math.round(dt); }
+      if (a.sesion) prevTs[a.sesion] = a.ts;
+      let f = a.ts; try { const d = new Date(a.ts); if (!isNaN(d)) f = d.toLocaleString('es-CL'); } catch (e) {}
+      return [f, a.sesion || '', a.vista || '', a.inv || '', a.cat || '', a.accion || '', delta, a.usuario || 'Cristian'];
+    });
+    sheets.push({
+      name: 'Actividad', hidden: false, rows: [
+        ['Fecha y hora', 'Sesión', 'Vista', 'N° Inv.', 'Categoría', 'Acción', 'Δ s', 'Usuario'],
+        ...actRows.reverse().slice(0, 3000)
+      ]
+    });
+    // USO (RESUMEN) — métricas de uso y tiempos calculadas a partir de Actividad.
+    sheets.push({ name: 'Uso (resumen)', hidden: false, headerRow: 0, rows: resumenUso(actAll) });
     return sheets;
   }
 
@@ -1931,10 +2050,38 @@
       h('button', { class: 'btn', title: 'Deja una sola MP por equipo y mes (conserva la oficial / más reciente y anula el resto)', onclick: () => { const n = nDup(); if (!n) return toast('No hay MP duplicadas', 'success'); if (!window.confirm(`¿Consolidar las MP duplicadas? Se conservará una por equipo y mes (la oficial o la más reciente) y se anularán las demás.`)) return; const k = H.consolidarMPDuplicadas(); toast(k ? `${k} MP duplicada(s) anulada(s)` : 'Sin duplicadas que consolidar', 'success'); renderMaint(); refreshChrome(); } }, `Quitar MP duplicadas (${nDup()})`),
       h('button', { class: 'btn', onclick: () => { const k = H.normalizarTiposEvento(); H.save(); toast(k ? `${k} etiquetas normalizadas` : 'Sin etiquetas que normalizar', 'success'); } }, 'Normalizar tipos de evento'),
       h('button', { class: 'btn', onclick: () => { const k = H.reconstruirCiclos(); H.save(); toast(k ? `${k} ciclos reconstruidos` : 'Ciclos ya consistentes', 'success'); refreshChrome(); } }, 'Reconstruir ciclos'),
-      h('button', { class: 'btn ghost', title: 'Auditoría: quién cambió qué y cuándo', onclick: () => formHistorialCambios() }, 'Historial de cambios')));
+      h('button', { class: 'btn ghost', title: 'Auditoría: quién cambió qué y cuándo', onclick: () => formHistorialCambios() }, 'Historial de cambios'),
+      h('button', { class: 'btn ghost', title: 'Registro de uso: todos los clics grabados', onclick: () => formActividad() }, 'Registro de actividad')));
     renderMaint();
     root.appendChild(h('div', { class: 'section' },
       h('div', { class: 's-hd' }, svg(ic.config, 16), h('h3', {}, 'Mantenimiento de datos'), h('span', { class: 's-sub' }, 'limpieza en una pasada')), maint));
+
+    // 3b) Contactos del servicio (vinculados a un servicio clínico)
+    const servicios = [...new Set(H.getState().equipos.map(e => e.servicio).filter(Boolean))].sort();
+    const contactosBox = h('div', { class: 's-bd flush' });
+    const renderContactos = () => {
+      const list = H.getContactos();
+      mount(contactosBox, h('div', { class: 'tbl-wrap' }, h('table', { class: 'dense' },
+        h('thead', {}, h('tr', {}, h('th', {}, 'Servicio'), h('th', {}, 'Cargo'), h('th', {}, 'Nombre'), h('th', {}, 'Apellido'), h('th', {}, 'Anexo'), h('th', {}, 'Correo electrónico'), h('th', { class: 'shrink' }, ''))),
+        h('tbody', {}, ...list.map(c => {
+          const inp = (k, type, ph) => h('input', { type: type || 'text', value: c[k] || '', placeholder: ph || '', style: { width: '100%' }, onchange: e => { H.actualizarContacto(c.id, { [k]: e.target.value }); } });
+          const servSel = selectEl([['', '— todos los servicios —'], ...servicios.map(s => [s, s])], c.servicio || '', { style: { width: '100%' }, onchange: e => { H.actualizarContacto(c.id, { servicio: e.target.value }); } });
+          return h('tr', {},
+            h('td', {}, servSel),
+            h('td', {}, inp('cargo', 'text', 'Cargo')),
+            h('td', {}, inp('nombre', 'text', 'Nombre')),
+            h('td', {}, inp('apellido', 'text', 'Apellido')),
+            h('td', {}, inp('anexo', 'text', 'Anexo')),
+            h('td', {}, inp('correo', 'email', 'correo@hospital.cl')),
+            h('td', {}, h('button', { class: 'btn icon ghost sm', title: 'Eliminar contacto', onclick: () => { if (window.confirm('¿Eliminar este contacto?')) { H.eliminarContacto(c.id); renderContactos(); } } }, svg(ic.x, 14))));
+        })))));
+    };
+    renderContactos();
+    root.appendChild(h('div', { class: 'section' },
+      h('div', { class: 's-hd' }, svg(ic.users, 16), h('h3', {}, 'Contactos del servicio'), h('span', { class: 's-sub' }, 'vinculados al servicio clínico · supervisor · encargado de equipos · jefe CCRR')),
+      contactosBox,
+      h('div', { class: 's-bd' }, h('button', { class: 'btn sm', onclick: () => { H.agregarContacto({ cargo: '' }); renderContactos(); } }, svg(ic.plus, 14), 'Agregar contacto'),
+        h('span', { class: 'faint', style: { fontSize: '11px', marginLeft: '8px' } }, 'Asigna un servicio para que el contacto aparezca en la ficha de sus equipos. "Todos los servicios" = contacto general.'))));
 
     // 4) Respaldo — el Google Sheet ES el respaldo. Si está conectado, no se ofrece copia
     // JSON (sería redundante). La copia JSON queda solo como salvavidas SIN conexión.
@@ -2187,6 +2334,8 @@
   }
 
   // Menú "Más": accesos secundarios que ya no van al frente (se abren a demanda).
+  // Incluye Contactos del servicio (se gestionan en Configuración) y el Registro
+  // de actividad, para que la función de esta versión siga a mano.
   function menuMas(anchor) {
     popover(anchor, [
       ['Cumplimiento', () => go('cumplimiento')],
@@ -2194,6 +2343,8 @@
       ['Lista de equipos', () => go('equipos')],
       ['Bitácora de eventos', () => go('eventos')],
       ['Todos los pendientes', () => go('pendientes')],
+      ['Contactos del servicio', () => go('configuracion')],
+      ['Registro de actividad', () => { try { formActividad(); } catch (e) { go('configuracion'); } }],
       ['Exportar libro Excel', () => excelExport()],
       ['Configuración', () => go('configuracion')]
     ]);
@@ -2259,6 +2410,36 @@
     if (Cloud.auto && Cloud.connected) { setTimeout(() => { Cloud.pull().then(r => { if (r && r.ok) { renderView(); refreshChrome(); toast('Sincronizado desde Google Sheets', 'success'); } }).catch(e => toast('Google Sheets: ' + e.message, 'error')); }, 400); }
 
     window.addEventListener('hashchange', () => { if (suppressHash) { suppressHash = false; return; } fromHash(); renderView(); syncNav(); });
+    // Registro de actividad (para evaluar el uso en la planilla): graba todos los
+    // clics con su categoría y sesión. Se sincroniza con moderación (máx. 1/30 s)
+    // aunque no haya cambios de datos, para que las sesiones de solo-navegación
+    // también queden en el Sheet.
+    H.logActividad('Sesión iniciada', { vista: view, cat: 'sesión', sesion: SESION });
+    let _lastActSync = Date.now(), _actSyncTimer = null;
+    function syncActividad() {
+      if (!Cloud.connected || !Cloud.auto) return;
+      const espera = 30000 - (Date.now() - _lastActSync);
+      if (espera > 0) { clearTimeout(_actSyncTimer); _actSyncTimer = setTimeout(syncActividad, espera + 50); return; }
+      _lastActSync = Date.now(); Cloud.push().catch(() => {});
+    }
+    function categoriaDe(el) {
+      if (el.closest('.topnav')) return 'navegación';
+      if (el.closest('.tabs')) return 'pestaña';
+      if (el.closest('.seg')) return 'filtro';
+      if (el.matches('.alert-card, .kpi, .kb-card') || el.closest('.alert-card, .kpi, .kb-card')) return 'tarjeta';
+      if (el.matches('.link') || el.tagName === 'A') return 'enlace';
+      return 'acción';
+    }
+    document.addEventListener('click', e => {
+      try {
+        const el = e.target && e.target.closest && e.target.closest('button, a, .link, .nav-item, .alert-card, .type-card, .tabs button, .seg button, .kpi, .kb-card, [role="button"]');
+        if (!el) return;
+        let label = (el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('title'))) || el.textContent || '';
+        label = String(label).replace(/\s+/g, ' ').trim();
+        if (!label) label = (typeof el.className === 'string' && el.className) ? el.className.split(' ')[0] : 'control';
+        if (H && H.logActividad) { H.logActividad(label, { vista: view, inv: params && params.inv, cat: categoriaDe(el), sesion: SESION }); syncActividad(); }
+      } catch (err) { /* el registro nunca debe romper la UI */ }
+    }, true);
     document.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); cmdkEl ? closeCmdk() : openCmdk(); }
       else if (e.key === 'Escape') { if (cmdkEl) closeCmdk(); else if (drawerOpen) closeDrawer(); else closePop(); }

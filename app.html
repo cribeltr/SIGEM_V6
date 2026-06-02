@@ -541,23 +541,17 @@ table.dense thead th.sortable:hover { background: var(--surface-3); }
  * Pantalla principal calmada: "Registrar" + "Pendientes". Pocas cosas por
  * pantalla, jerarquía clara y aire. No toca el motor (src/), solo presentación.
  * ==========================================================================*/
-
-/* Contenido un poco más aireado en todas las vistas. */
 .view { padding: 22px 18px 64px; }
-
-/* Columna central acotada para que el inicio respire. */
 .home { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 .home-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .home-hd h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
 .home-date { color: var(--muted); font-size: 13.5px; text-transform: capitalize; }
 .home-sub { color: var(--muted); font-size: 13px; font-weight: 400; }
 
-/* Tarjetas grandes y suaves. */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; box-shadow: var(--shadow); }
 .card-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
 .card-hd h2 { margin: 0; font-size: 16.5px; font-weight: 650; letter-spacing: -.2px; }
 
-/* Tarea de inicio de mes (aparece solo cuando corresponde). */
 .task-card { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; font: inherit; cursor: pointer;
   background: var(--accent-bg); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
   border-radius: 16px; padding: 16px 18px; transition: border-color .12s ease; }
@@ -567,7 +561,6 @@ table.dense thead th.sortable:hover { background: var(--surface-3); }
 .task-tx b { font-size: 14.5px; font-weight: 600; }
 .task-card .ico:last-child { color: var(--accent); opacity: .7; flex: 0 0 auto; }
 
-/* Botones grandes de "Registrar". */
 .reg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 12px; }
 .reg-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   min-height: 100px; padding: 16px 12px; font: inherit; font-size: 13.5px; font-weight: 550; line-height: 1.3;
@@ -576,7 +569,6 @@ table.dense thead th.sortable:hover { background: var(--surface-3); }
 .reg-btn:hover { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
 .reg-ic { color: var(--accent); display: grid; place-items: center; }
 
-/* Lista de pendientes (calmada, una por fila). */
 .pend-list { display: flex; flex-direction: column; gap: 11px; }
 .pend { border: 1px solid var(--border); border-radius: 13px; background: var(--surface); overflow: hidden; }
 .pend.urge { border-color: color-mix(in srgb, var(--noop) 45%, var(--border)); }
@@ -591,7 +583,6 @@ table.dense thead th.sortable:hover { background: var(--surface-3); }
 .count-pill.urge { background: var(--noop); color: #fff; }
 .empty-calm { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
 
-/* Topbar más calmado y buscador prominente. */
 .topbar { height: 54px; gap: 10px; padding: 0 16px; }
 .brand .mark { width: 26px; height: 26px; }
 .search-pill { min-width: 240px; padding: 8px 13px; border-radius: 11px; font-size: 13.5px; }
@@ -731,7 +722,10 @@ if (typeof window !== "undefined") { window.SEED = SEED; }
   const DOCS_CORRECTIVO = ['Solicitud SIGEM con tarea cerrada', 'Cotización', 'Informe técnico trato directo', 'Orden de compra', 'Guía de despacho de repuestos', 'Informe visita diagnóstica', 'Informe visita correctiva', 'Hoja de envío', 'Informe técnico ST externo', 'Guía de despacho de retorno'];
   const DOCS_PREVENTIVO = ['Protocolo / hoja de MP', 'Pauta de monitoreo diario (DEA)', 'Firma jefe equipo médico', 'Informe técnico de empresa externa'];
 
-  const TIPO_PENDIENTE = { documento_faltante: 'Documento faltante', firma_faltante: 'Firma faltante', reprogramacion: 'Reprogramación MP', recomendacion_tecnica: 'Recomendación técnica', gestion_general: 'Gestión general', seguimiento: 'Seguimiento de estado' };
+  const TIPO_PENDIENTE = { documento_faltante: 'Documento faltante', firma_faltante: 'Firma faltante', reprogramacion: 'Reprogramación MP', recomendacion_tecnica: 'Recomendación técnica', pauta_monitoreo: 'Pauta de Monitoreo Diario', gestion_general: 'Gestión general', seguimiento: 'Seguimiento de estado' };
+  // Cargos de contacto del servicio (referencia organizacional, editable).
+  const CARGOS_CONTACTO = ['Supervisor de Servicio Clínico', 'Encargado de Equipos', 'Jefe del Centro de Responsabilidad CCRR'];
+  function contactosPorDefecto() { return CARGOS_CONTACTO.map((cargo, i) => ({ id: i + 1, servicio: '', nombre: '', apellido: '', anexo: '', correo: '', cargo })); }
   // Estados de pendiente orientados a la acción: No iniciado -> En proceso -> Resuelto.
   // 'cerrado' se conserva como estado final (= Resuelto) para no romper conteos (!== 'cerrado').
   const ESTADO_PEND_LABEL = { no_iniciado: 'No iniciado', en_proceso: 'En proceso', cerrado: 'Resuelto' };
@@ -789,9 +783,12 @@ if (typeof window !== "undefined") { window.SEED = SEED; }
     if (!d.conflictos) d.conflictos = [];
     if (!d.importaciones) d.importaciones = [];
     if (!d.prefs) d.prefs = {};
+    if (!d.contactos) d.contactos = contactosPorDefecto();
+    if (!d.actividad) d.actividad = [];
     d.counters = d.counters || {};
     if (d.counters.conflicto == null) d.counters.conflicto = (d.conflictos.length || 0) + 1;
     if (d.counters.importacion == null) d.counters.importacion = (d.importaciones.length || 0) + 1;
+    if (d.counters.contacto == null) d.counters.contacto = d.contactos.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
     // Normalizar estados de pendientes de versiones previas (creado/abierto -> no_iniciado).
     (d.pendientes || []).forEach(p => { p.estado = normalizarEstadoPend(p.estado); });
     d.__v = APP_VERSION;
@@ -958,10 +955,12 @@ if (typeof window !== "undefined") { window.SEED = SEED; }
       __created: new Date().toISOString(),
       __updated: new Date().toISOString(),
       equipos, eventos, ciclos, pendientes, tareas,
-      counters: { evento: eventos.length + 1, pend: pendientes.length + 1, tarea: tareas.length + 1, ciclo: 1, audit: 1, conflicto: 1, importacion: 1 },
+      counters: { evento: eventos.length + 1, pend: pendientes.length + 1, tarea: tareas.length + 1, ciclo: 1, audit: 1, conflicto: 1, importacion: 1, contacto: CARGOS_CONTACTO.length + 1 },
       audit: [],
       asignacionesMP: {},
       correos: [],
+      contactos: contactosPorDefecto(),
+      actividad: [],
       conflictos: [],
       importaciones: [],
       prefs: {}
@@ -2158,6 +2157,74 @@ if (typeof window !== "undefined") { window.SEED = SEED; }
     return { ok: true, pendiente: p };
   }
 
+  // ---- Contactos del servicio (referencia organizacional) ------------------
+  function getContactos() { return state.contactos || (state.contactos = contactosPorDefecto()); }
+  // Contactos vinculados a un servicio: los de ese servicio + los generales (sin servicio).
+  function contactosDeServicio(servicio) {
+    const s = (servicio || '').trim().toLowerCase();
+    return getContactos().filter(c => { const cs = (c.servicio || '').trim().toLowerCase(); return cs === '' || cs === s; });
+  }
+  function agregarContacto(c) {
+    c = c || {};
+    state.contactos = state.contactos || [];
+    if (state.counters.contacto == null) state.counters.contacto = state.contactos.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
+    const nuevo = { id: state.counters.contacto++, servicio: c.servicio || '', nombre: c.nombre || '', apellido: c.apellido || '', anexo: c.anexo || '', correo: c.correo || '', cargo: c.cargo || '' };
+    state.contactos.push(nuevo);
+    audit('contacto', nuevo.id, 'creado', null, [nuevo.servicio, nuevo.cargo].filter(Boolean).join(' · '));
+    save();
+    return { ok: true, contacto: nuevo };
+  }
+  function actualizarContacto(id, campos) {
+    const c = (state.contactos || []).find(x => x.id === id);
+    if (!c) return { ok: false, error: 'Contacto no encontrado' };
+    ['servicio', 'nombre', 'apellido', 'anexo', 'correo', 'cargo'].forEach(k => {
+      if (campos && (k in campos)) { const v = campos[k] == null ? '' : String(campos[k]); if (c[k] !== v) { audit('contacto', c.id, k, c[k], v); c[k] = v; } }
+    });
+    save();
+    return { ok: true, contacto: c };
+  }
+  function eliminarContacto(id) {
+    const i = (state.contactos || []).findIndex(x => x.id === id);
+    if (i < 0) return { ok: false, error: 'Contacto no encontrado' };
+    const c = state.contactos.splice(i, 1)[0];
+    audit('contacto', id, 'eliminado', c ? c.cargo : '', null);
+    save();
+    return { ok: true };
+  }
+
+  // ---- Registro de actividad (todos los clics) -----------------------------
+  // Bitácora de uso de la app. Se guarda localmente con debounce y viaja al
+  // Sheet junto con el próximo guardado real (no genera una sincronización por
+  // cada clic). Anillo acotado para no inflar el almacenamiento.
+  const ACTIVIDAD_MAX = 1500;
+  let _actTimer = null;
+  function getActividad() { return state.actividad || (state.actividad = []); }
+  // Une dos registros de actividad (telemetría append-only) sin duplicar, ordenado y acotado.
+  function mergeActividad(a, b) {
+    const seen = new Set(), res = [];
+    (a || []).concat(b || []).forEach(e => {
+      if (!e || !e.ts) return;
+      const k = e.ts + '|' + (e.sesion || '') + '|' + (e.accion || '');
+      if (seen.has(k)) return; seen.add(k); res.push(e);
+    });
+    res.sort((x, y) => (x.ts || '').localeCompare(y.ts || ''));
+    if (res.length > ACTIVIDAD_MAX) res.splice(0, res.length - ACTIVIDAD_MAX);
+    return res;
+  }
+  function logActividad(accion, extra) {
+    if (!state || !accion) return;
+    state.actividad = state.actividad || [];
+    extra = extra || {};
+    const ent = { ts: new Date().toISOString(), sesion: extra.sesion || '', vista: extra.vista || '', cat: extra.cat || 'acción', accion: String(accion).replace(/\s+/g, ' ').trim().slice(0, 140) };
+    if (extra.inv) ent.inv = extra.inv;
+    ent.usuario = extra.usuario || 'Cristian';
+    if (!ent.accion) return;
+    state.actividad.push(ent);
+    if (state.actividad.length > ACTIVIDAD_MAX) state.actividad.splice(0, state.actividad.length - ACTIVIDAD_MAX);
+    clearTimeout(_actTimer);
+    _actTimer = setTimeout(function () { try { persistirState(); } catch (e) {} }, 1200);
+  }
+
   // Actualiza campos editables de un pendiente. (Núcleo del "Guardar" de abrirPendiente.)
   // cambios = {tipo, estado, ejecutor, desc, fechaComp, proxRecord}
   function actualizarPendiente(p, cambios) {
@@ -2278,7 +2345,10 @@ if (typeof window !== "undefined") { window.SEED = SEED; }
   // Reemplaza el state con un backup ya parseado. (Núcleo de "importData".)
   function importarBackup(data) {
     if (!data || !data.__v) return { ok: false, error: 'Archivo no válido (falta __v).' };
+    const prevAct = (state && state.actividad) ? state.actividad.slice() : [];
     state = migrate(data);
+    // La actividad es telemetría append-only: conservar la local + la importada (no se pierde al sincronizar).
+    state.actividad = mergeActividad(prevAct, state.actividad);
     normalizarEquipos();
     reconstruirCiclos();
     normalizarTiposEvento();
@@ -2516,7 +2586,11 @@ if (typeof window !== "undefined") { window.SEED = SEED; }
     APP_VERSION, STORAGE_KEY, MESES, MES_NUM, NUM_MES, MES_ESPANOL, EJECUTORES,
     TIPOS_EVENTO, CAUSALES, ESTADOS_PRIMARIOS, ESTADO_LABEL, SUBESTADOS_NOOP,
     SUBESTADOS_ST, DOCS_CORRECTIVO, DOCS_PREVENTIVO, TIPO_PENDIENTE, ESTADO_PEND_LABEL,
-    MOTIVOS_ANULACION, MP_CAUSAL_ESTADO, RESULTADOS_MP,
+    MOTIVOS_ANULACION, MP_CAUSAL_ESTADO, RESULTADOS_MP, CARGOS_CONTACTO,
+    // contactos del servicio
+    getContactos, contactosDeServicio, agregarContacto, actualizarContacto, eliminarContacto,
+    // registro de actividad (clics)
+    logActividad, getActividad,
     // estado / persistencia
     load, migrate, save, init, resetState, persistirState, stateEsFresh,
     normalizarEquipos, normalizarEstadoPend, limpiarEfectosAnulados, reconstruirCiclos, normalizarTiposEvento, normalizarEstadoEventos, asignarIdsEquipos, idsMPDuplicadas, oficializarTodosBorradores, bootstrapDatos,
@@ -2615,6 +2689,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', menu: 'M3 6h18M3 12h18M3 18h18',
     dl: 'M12 3v12m0 0l4-4m-4 4l-4-4M4 21h16', up: 'M12 21V9m0 0l4 4m-4-4l-4 4M4 3h16',
     x: 'M6 6l12 12M18 6L6 18', chev: 'M9 6l6 6-6 6', dots: 'M12 5h.01M12 12h.01M12 19h.01',
+    users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
     funnel: 'M22 3H2l8 9.46V19l4 2v-8.54L22 3z'
   };
   function svg(d, w) { return h('span', { class: 'ico', html: `<svg width="${w || 17}" height="${w || 17}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${d.split('M').filter(Boolean).map(p => `<path d="M${p}"/>`).join('')}</svg>` }); }
@@ -2624,6 +2699,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   const fmtFecha = H.fmtFecha;
   const NOW = new Date(); const YEAR = NOW.getFullYear(); const MONTH = NOW.getMonth();
   const APP_VERSION = '2026-06-02 · v2.0';   // sello de build visible (barra superior y Configuración) para confirmar despliegue
+  const SESION = new Date().toISOString().slice(0, 19).replace('T', ' ');   // id de sesión (para medir uso/tiempos)
   const ESTADO_CLS = { operativo: 'op', no_operativo: 'noop', en_servicio_tecnico: 'st', baja: 'baja', desconocido: 'desc' };
 
   function estadoPill(estado) {
@@ -3262,13 +3338,29 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     render();
     return h('div', { class: 'section' }, h('div', { class: 's-hd' }, h('h3', {}, 'Bitácora'), sub, h('div', { class: 'tb-spacer' }), chk), body);
   }
-  // === Pestaña ARCHIVOS: adjuntos en Drive + notas del equipo ===
+  // === Pestaña ARCHIVOS: adjuntos en Drive + notas + contactos del servicio ===
   function tabArchivos(eq) {
-    return h('div', { class: 'hsplit', style: { flexWrap: 'wrap', alignItems: 'flex-start' } },
-      h('div', { class: 'section', style: { flex: '1', minWidth: '300px' } },
-        h('div', { class: 's-hd' }, svg(ic.dl, 15), h('h3', {}, 'Archivos del equipo'), h('span', { class: 's-sub' }, (eq.adjuntos || []).length || '')),
-        h('div', { class: 's-bd' }, adjuntosBox(eq, eq.inv))),
-      h('div', { style: { flex: '1', minWidth: '300px' } }, notasPanel(eq)));
+    return h('div', {},
+      contactosPanel(eq),
+      h('div', { class: 'hsplit', style: { flexWrap: 'wrap', alignItems: 'flex-start' } },
+        h('div', { class: 'section', style: { flex: '1', minWidth: '300px' } },
+          h('div', { class: 's-hd' }, svg(ic.dl, 15), h('h3', {}, 'Archivos del equipo'), h('span', { class: 's-sub' }, (eq.adjuntos || []).length || '')),
+          h('div', { class: 's-bd' }, adjuntosBox(eq, eq.inv))),
+        h('div', { style: { flex: '1', minWidth: '300px' } }, notasPanel(eq))));
+  }
+  // Contactos vinculados al servicio del equipo (los del servicio + los generales).
+  function contactosPanel(eq) {
+    const list = H.contactosDeServicio(eq.servicio).filter(c => c.nombre || c.apellido || c.correo || c.anexo);
+    return h('div', { class: 'section' },
+      h('div', { class: 's-hd' }, svg(ic.users, 15), h('h3', {}, 'Contactos del servicio'), h('span', { class: 's-sub' }, eq.servicio || '—')),
+      h('div', { class: 's-bd' }, list.length
+        ? h('div', { class: 'row-list' }, ...list.map(c => h('div', { class: 'mini-row', style: { alignItems: 'baseline', flexWrap: 'wrap', gap: '8px' } },
+          h('b', { style: { minWidth: '170px' } }, [c.nombre, c.apellido].filter(Boolean).join(' ') || '—'),
+          h('span', { class: 'tag' }, c.cargo || '—'),
+          c.servicio ? h('span', { class: 'faint', style: { fontSize: '11px' } }, c.servicio) : h('span', { class: 'faint', style: { fontSize: '11px' } }, 'general'),
+          c.anexo ? h('span', { class: 'faint', style: { fontSize: '11.5px' } }, 'anexo ' + c.anexo) : null,
+          c.correo ? h('a', { href: 'mailto:' + c.correo, style: { color: 'var(--accent)', fontSize: '11.5px' } }, c.correo) : null)))
+        : h('div', { class: 'faint', style: { fontSize: '11.5px' } }, 'Sin contactos para este servicio. Agrégalos en Configuración → Contactos del servicio.')));
   }
   function notasPanel(eq) {
     const box = h('div', {});
@@ -3335,7 +3427,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   function formHistorialCambios() {
     const S = H.getState();
     const all = (S.audit || []).slice().sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
-    const ENT = { equipo: 'Equipo', evento: 'Evento', pendiente: 'Pendiente', tarea: 'Tarea', ciclo: 'Ciclo' };
+    const ENT = { equipo: 'Equipo', evento: 'Evento', pendiente: 'Pendiente', tarea: 'Tarea', ciclo: 'Ciclo', contacto: 'Contacto' };
     const fhora = ts => { if (!ts) return '—'; const d = new Date(ts); return isNaN(d) ? ts : d.toLocaleString('es-CL'); };
     const v = x => (x === null || x === undefined || x === '') ? '—' : (x === false ? 'No' : x === true ? 'Sí' : String(x));
     let q = '', desde = '', hasta = '';
@@ -3366,6 +3458,31 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
           h('span', { class: 'faint', style: { fontSize: '11px' } }, 'Hasta'), h('input', { type: 'date', style: { width: 'auto' }, onchange: e => { hasta = e.target.value; render(); } }),
           h('div', { class: 'tb-spacer' }), cnt),
         body),
+      footer: [h('button', { class: 'btn', onclick: closeDrawer }, 'Cerrar')]
+    });
+  }
+  // Registro de actividad: todos los clics grabados. Acceso desde Configuración.
+  function formActividad() {
+    const all = H.getActividad().slice().reverse();   // más reciente primero
+    let q = '';
+    const body = h('div', {}); const cnt = h('span', { class: 's-sub' });
+    const fhora = ts => { if (!ts) return '—'; const d = new Date(ts); return isNaN(d) ? ts : d.toLocaleString('es-CL'); };
+    function render() {
+      const ql = q.trim().toLowerCase();
+      const list = all.filter(a => !ql || [a.vista, a.inv, a.accion, a.cat].map(x => String(x || '')).join(' ').toLowerCase().includes(ql));
+      const sesiones = new Set(all.map(a => a.sesion).filter(Boolean)).size;
+      cnt.textContent = `${list.length} de ${all.length} clics · ${sesiones} sesión(es)`;
+      mount(body, list.length ? h('div', { class: 'tbl-wrap' }, h('table', { class: 'dense' },
+        h('thead', {}, h('tr', {}, h('th', {}, 'Fecha y hora'), h('th', {}, 'Vista'), h('th', {}, 'Categoría'), h('th', {}, 'N° Inv.'), h('th', {}, 'Acción'))),
+        h('tbody', {}, ...list.slice(0, 1500).map(a => h('tr', {},
+          h('td', { class: 'muted nowrap' }, fhora(a.ts)), h('td', {}, capCell(110, a.vista || '—')),
+          h('td', {}, h('span', { class: 'tag' }, a.cat || 'acción')),
+          h('td', { class: 'mono' }, a.inv || '—'), h('td', {}, capCell(340, a.accion || '—'))))))) : h('div', { class: 'empty' }, 'Sin actividad registrada todavía'));
+    }
+    render();
+    openDrawer({
+      title: 'Registro de actividad', wide: true,
+      body: h('div', {}, h('div', { class: 'filterbar' }, h('input', { type: 'search', placeholder: 'Buscar…', oninput: e => { q = e.target.value; render(); } }), h('div', { class: 'tb-spacer' }), cnt), body),
       footer: [h('button', { class: 'btn', onclick: closeDrawer }, 'Cerrar')]
     });
   }
@@ -4342,6 +4459,55 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   }
 
   // Hojas de trabajo legibles que se escriben en el Google Sheet (para usar el
+  // Resumen de uso para evaluar la aplicación en la planilla: clics, sesiones,
+  // tiempos por vista, acciones más usadas, por día y por hora. Devuelve AoA.
+  function resumenUso(actividad) {
+    const A = (actividad || []).filter(a => a && a.ts).slice().sort((a, b) => (a.ts || '').localeCompare(b.ts || ''));
+    if (!A.length) return [['USO DE LA APLICACIÓN'], [], ['Sin actividad registrada todavía. Usa la app y vuelve a sincronizar.']];
+    const CAP = 300; // s: huecos mayores se consideran inactividad (no se suman al tiempo de la vista)
+    const porVista = {}, porCat = {}, porAccion = {}, porDia = {}, porHora = {}, ses = {};
+    let prev = null;
+    A.forEach(a => {
+      const d = new Date(a.ts); if (isNaN(d)) return;
+      const v = a.vista || '—'; (porVista[v] = porVista[v] || { n: 0, seg: 0 }).n++;
+      porCat[a.cat || 'acción'] = (porCat[a.cat || 'acción'] || 0) + 1;
+      porAccion[a.accion || '—'] = (porAccion[a.accion || '—'] || 0) + 1;
+      porDia[a.ts.slice(0, 10)] = (porDia[a.ts.slice(0, 10)] || 0) + 1;
+      porHora[d.getHours()] = (porHora[d.getHours()] || 0) + 1;
+      const sid = a.sesion || '(sin sesión)'; const s = ses[sid] = ses[sid] || { ini: a.ts, fin: a.ts, n: 0 };
+      s.n++; if (a.ts > s.fin) s.fin = a.ts; if (a.ts < s.ini) s.ini = a.ts;
+      if (prev && prev.sesion === a.sesion) { let dt = (d - new Date(prev.ts)) / 1000; if (dt > 0) porVista[prev.vista || '—'].seg += Math.min(dt, CAP); }
+      prev = a;
+    });
+    const fmtT = s => s == null ? '—' : (s >= 3600 ? (s / 3600).toFixed(1) + ' h' : s >= 60 ? (s / 60).toFixed(1) + ' min' : Math.round(s) + ' s');
+    const fH = ts => { const d = new Date(ts); return isNaN(d) ? ts : d.toLocaleString('es-CL'); };
+    const sesArr = Object.keys(ses).map(k => ({ id: k, dur: (new Date(ses[k].fin) - new Date(ses[k].ini)) / 1000, n: ses[k].n }));
+    const durs = sesArr.map(s => s.dur).sort((a, b) => a - b);
+    const prom = durs.length ? durs.reduce((m, x) => m + x, 0) / durs.length : 0;
+    const med = durs.length ? durs[Math.floor((durs.length - 1) / 2)] : 0;
+    const top = (obj, n) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n);
+    const rows = [];
+    rows.push(['USO DE LA APLICACIÓN · resumen automático para evaluar el uso']);
+    rows.push(['Generado', new Date().toLocaleString('es-CL')]);
+    rows.push(['Periodo', fH(A[0].ts) + '  →  ' + fH(A[A.length - 1].ts)]);
+    rows.push(['Total de clics', A.length], ['Sesiones', sesArr.length], ['Días activos', Object.keys(porDia).length]);
+    rows.push(['Clics por sesión (promedio)', sesArr.length ? +(A.length / sesArr.length).toFixed(1) : 0]);
+    rows.push(['Duración de sesión · promedio', fmtT(prom)], ['Duración de sesión · mediana', fmtT(med)]);
+    rows.push([], ['CLICS Y TIEMPO POR VISTA'], ['Vista', 'Clics', 'Tiempo activo aprox.']);
+    Object.keys(porVista).sort((a, b) => porVista[b].n - porVista[a].n).forEach(k => rows.push([k, porVista[k].n, fmtT(porVista[k].seg)]));
+    rows.push([], ['CLICS POR CATEGORÍA'], ['Categoría', 'Clics']);
+    top(porCat, 20).forEach(([k, v]) => rows.push([k, v]));
+    rows.push([], ['ACCIONES MÁS USADAS (top 15)'], ['Acción', 'Veces']);
+    top(porAccion, 15).forEach(([k, v]) => rows.push([k, v]));
+    rows.push([], ['CLICS POR DÍA'], ['Día', 'Clics']);
+    Object.keys(porDia).sort().forEach(k => rows.push([k, porDia[k]]));
+    rows.push([], ['CLICS POR HORA DEL DÍA'], ['Hora', 'Clics']);
+    for (let hh = 0; hh < 24; hh++) if (porHora[hh]) rows.push([String(hh).padStart(2, '0') + ':00', porHora[hh]]);
+    rows.push([], ['DURACIÓN DE CADA SESIÓN'], ['Sesión', 'Clics', 'Duración']);
+    sesArr.sort((a, b) => a.id.localeCompare(b.id)).slice(-50).forEach(s => rows.push([s.id, s.n, fmtT(s.dur)]));
+    return rows;
+  }
+
   // archivo sin la app). Devuelve [{name, rows(AOA), hidden, headerRow}].
   function cuadernoSheets() {
     const S = H.getState(); const hoy = H.hoyLocal();
@@ -4357,7 +4523,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     sheets.push({
       name: 'Inicio', hidden: false, headerRow: 0, rows: [
         ['Gestión Equipos Críticos HHHA · Datos sincronizados desde la aplicación'], ['Actualizado', hoy], [],
-        ['Hojas de datos: Inventario · Pendientes · Tareas · Tareas-Pendientes (relación) · Bitácora · Registro (por fecha/hora de creación) · Equipos en servicio técnico · Equipos no operativos.'],
+        ['Hojas de datos: Inventario · Pendientes · Tareas · Tareas-Pendientes (relación) · Bitácora · Registro (por fecha/hora de creación) · Equipos en servicio técnico · Equipos no operativos · Contactos · Actividad.'],
         ['ID_EQUIPO es un correlativo estable de Inventario. La unión entre hojas se hace por "N° Inv." (= "N° Inventario" de Inventario).'],
         ['Tareas-Pendientes une ID_PENDIENTE con ID_TAREAS.'],
         ['Las hojas de sistema (empiezan con "_") están ocultas: guardan el estado. No las borres ni edites.'], [],
@@ -4429,6 +4595,33 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     });
     sheets.push({ name: 'Equipos en servicio técnico', hidden: false, rows: [colsEstado, ...filasEstado('en_servicio_tecnico')] });
     sheets.push({ name: 'Equipos no operativos', hidden: false, rows: [colsEstado, ...filasEstado('no_operativo')] });
+
+    // CONTACTOS del servicio (vinculados al servicio clínico)
+    sheets.push({
+      name: 'Contactos', hidden: false, rows: [
+        ['Servicio', 'Cargo', 'Nombre', 'Apellido', 'Anexo', 'Correo electrónico'],
+        ...H.getContactos().map(c => [c.servicio || '(todos)', c.cargo || '', c.nombre || '', c.apellido || '', c.anexo || '', c.correo || ''])
+      ]
+    });
+
+    // ACTIVIDAD — registro de uso (clics) con sesión, categoría y Δ de tiempo.
+    const actAll = H.getActividad();
+    const prevTs = {};
+    const actRows = actAll.map(a => {
+      let delta = '';
+      if (a.sesion && prevTs[a.sesion]) { const dt = (new Date(a.ts) - new Date(prevTs[a.sesion])) / 1000; if (isFinite(dt) && dt >= 0) delta = Math.round(dt); }
+      if (a.sesion) prevTs[a.sesion] = a.ts;
+      let f = a.ts; try { const d = new Date(a.ts); if (!isNaN(d)) f = d.toLocaleString('es-CL'); } catch (e) {}
+      return [f, a.sesion || '', a.vista || '', a.inv || '', a.cat || '', a.accion || '', delta, a.usuario || 'Cristian'];
+    });
+    sheets.push({
+      name: 'Actividad', hidden: false, rows: [
+        ['Fecha y hora', 'Sesión', 'Vista', 'N° Inv.', 'Categoría', 'Acción', 'Δ s', 'Usuario'],
+        ...actRows.reverse().slice(0, 3000)
+      ]
+    });
+    // USO (RESUMEN) — métricas de uso y tiempos calculadas a partir de Actividad.
+    sheets.push({ name: 'Uso (resumen)', hidden: false, headerRow: 0, rows: resumenUso(actAll) });
     return sheets;
   }
 
@@ -4498,10 +4691,38 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       h('button', { class: 'btn', title: 'Deja una sola MP por equipo y mes (conserva la oficial / más reciente y anula el resto)', onclick: () => { const n = nDup(); if (!n) return toast('No hay MP duplicadas', 'success'); if (!window.confirm(`¿Consolidar las MP duplicadas? Se conservará una por equipo y mes (la oficial o la más reciente) y se anularán las demás.`)) return; const k = H.consolidarMPDuplicadas(); toast(k ? `${k} MP duplicada(s) anulada(s)` : 'Sin duplicadas que consolidar', 'success'); renderMaint(); refreshChrome(); } }, `Quitar MP duplicadas (${nDup()})`),
       h('button', { class: 'btn', onclick: () => { const k = H.normalizarTiposEvento(); H.save(); toast(k ? `${k} etiquetas normalizadas` : 'Sin etiquetas que normalizar', 'success'); } }, 'Normalizar tipos de evento'),
       h('button', { class: 'btn', onclick: () => { const k = H.reconstruirCiclos(); H.save(); toast(k ? `${k} ciclos reconstruidos` : 'Ciclos ya consistentes', 'success'); refreshChrome(); } }, 'Reconstruir ciclos'),
-      h('button', { class: 'btn ghost', title: 'Auditoría: quién cambió qué y cuándo', onclick: () => formHistorialCambios() }, 'Historial de cambios')));
+      h('button', { class: 'btn ghost', title: 'Auditoría: quién cambió qué y cuándo', onclick: () => formHistorialCambios() }, 'Historial de cambios'),
+      h('button', { class: 'btn ghost', title: 'Registro de uso: todos los clics grabados', onclick: () => formActividad() }, 'Registro de actividad')));
     renderMaint();
     root.appendChild(h('div', { class: 'section' },
       h('div', { class: 's-hd' }, svg(ic.config, 16), h('h3', {}, 'Mantenimiento de datos'), h('span', { class: 's-sub' }, 'limpieza en una pasada')), maint));
+
+    // 3b) Contactos del servicio (vinculados a un servicio clínico)
+    const servicios = [...new Set(H.getState().equipos.map(e => e.servicio).filter(Boolean))].sort();
+    const contactosBox = h('div', { class: 's-bd flush' });
+    const renderContactos = () => {
+      const list = H.getContactos();
+      mount(contactosBox, h('div', { class: 'tbl-wrap' }, h('table', { class: 'dense' },
+        h('thead', {}, h('tr', {}, h('th', {}, 'Servicio'), h('th', {}, 'Cargo'), h('th', {}, 'Nombre'), h('th', {}, 'Apellido'), h('th', {}, 'Anexo'), h('th', {}, 'Correo electrónico'), h('th', { class: 'shrink' }, ''))),
+        h('tbody', {}, ...list.map(c => {
+          const inp = (k, type, ph) => h('input', { type: type || 'text', value: c[k] || '', placeholder: ph || '', style: { width: '100%' }, onchange: e => { H.actualizarContacto(c.id, { [k]: e.target.value }); } });
+          const servSel = selectEl([['', '— todos los servicios —'], ...servicios.map(s => [s, s])], c.servicio || '', { style: { width: '100%' }, onchange: e => { H.actualizarContacto(c.id, { servicio: e.target.value }); } });
+          return h('tr', {},
+            h('td', {}, servSel),
+            h('td', {}, inp('cargo', 'text', 'Cargo')),
+            h('td', {}, inp('nombre', 'text', 'Nombre')),
+            h('td', {}, inp('apellido', 'text', 'Apellido')),
+            h('td', {}, inp('anexo', 'text', 'Anexo')),
+            h('td', {}, inp('correo', 'email', 'correo@hospital.cl')),
+            h('td', {}, h('button', { class: 'btn icon ghost sm', title: 'Eliminar contacto', onclick: () => { if (window.confirm('¿Eliminar este contacto?')) { H.eliminarContacto(c.id); renderContactos(); } } }, svg(ic.x, 14))));
+        })))));
+    };
+    renderContactos();
+    root.appendChild(h('div', { class: 'section' },
+      h('div', { class: 's-hd' }, svg(ic.users, 16), h('h3', {}, 'Contactos del servicio'), h('span', { class: 's-sub' }, 'vinculados al servicio clínico · supervisor · encargado de equipos · jefe CCRR')),
+      contactosBox,
+      h('div', { class: 's-bd' }, h('button', { class: 'btn sm', onclick: () => { H.agregarContacto({ cargo: '' }); renderContactos(); } }, svg(ic.plus, 14), 'Agregar contacto'),
+        h('span', { class: 'faint', style: { fontSize: '11px', marginLeft: '8px' } }, 'Asigna un servicio para que el contacto aparezca en la ficha de sus equipos. "Todos los servicios" = contacto general.'))));
 
     // 4) Respaldo — el Google Sheet ES el respaldo. Si está conectado, no se ofrece copia
     // JSON (sería redundante). La copia JSON queda solo como salvavidas SIN conexión.
@@ -4754,6 +4975,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   }
 
   // Menú "Más": accesos secundarios que ya no van al frente (se abren a demanda).
+  // Incluye Contactos del servicio (se gestionan en Configuración) y el Registro
+  // de actividad, para que la función de esta versión siga a mano.
   function menuMas(anchor) {
     popover(anchor, [
       ['Cumplimiento', () => go('cumplimiento')],
@@ -4761,6 +4984,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       ['Lista de equipos', () => go('equipos')],
       ['Bitácora de eventos', () => go('eventos')],
       ['Todos los pendientes', () => go('pendientes')],
+      ['Contactos del servicio', () => go('configuracion')],
+      ['Registro de actividad', () => { try { formActividad(); } catch (e) { go('configuracion'); } }],
       ['Exportar libro Excel', () => excelExport()],
       ['Configuración', () => go('configuracion')]
     ]);
@@ -4826,6 +5051,36 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     if (Cloud.auto && Cloud.connected) { setTimeout(() => { Cloud.pull().then(r => { if (r && r.ok) { renderView(); refreshChrome(); toast('Sincronizado desde Google Sheets', 'success'); } }).catch(e => toast('Google Sheets: ' + e.message, 'error')); }, 400); }
 
     window.addEventListener('hashchange', () => { if (suppressHash) { suppressHash = false; return; } fromHash(); renderView(); syncNav(); });
+    // Registro de actividad (para evaluar el uso en la planilla): graba todos los
+    // clics con su categoría y sesión. Se sincroniza con moderación (máx. 1/30 s)
+    // aunque no haya cambios de datos, para que las sesiones de solo-navegación
+    // también queden en el Sheet.
+    H.logActividad('Sesión iniciada', { vista: view, cat: 'sesión', sesion: SESION });
+    let _lastActSync = Date.now(), _actSyncTimer = null;
+    function syncActividad() {
+      if (!Cloud.connected || !Cloud.auto) return;
+      const espera = 30000 - (Date.now() - _lastActSync);
+      if (espera > 0) { clearTimeout(_actSyncTimer); _actSyncTimer = setTimeout(syncActividad, espera + 50); return; }
+      _lastActSync = Date.now(); Cloud.push().catch(() => {});
+    }
+    function categoriaDe(el) {
+      if (el.closest('.topnav')) return 'navegación';
+      if (el.closest('.tabs')) return 'pestaña';
+      if (el.closest('.seg')) return 'filtro';
+      if (el.matches('.alert-card, .kpi, .kb-card') || el.closest('.alert-card, .kpi, .kb-card')) return 'tarjeta';
+      if (el.matches('.link') || el.tagName === 'A') return 'enlace';
+      return 'acción';
+    }
+    document.addEventListener('click', e => {
+      try {
+        const el = e.target && e.target.closest && e.target.closest('button, a, .link, .nav-item, .alert-card, .type-card, .tabs button, .seg button, .kpi, .kb-card, [role="button"]');
+        if (!el) return;
+        let label = (el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('title'))) || el.textContent || '';
+        label = String(label).replace(/\s+/g, ' ').trim();
+        if (!label) label = (typeof el.className === 'string' && el.className) ? el.className.split(' ')[0] : 'control';
+        if (H && H.logActividad) { H.logActividad(label, { vista: view, inv: params && params.inv, cat: categoriaDe(el), sesion: SESION }); syncActividad(); }
+      } catch (err) { /* el registro nunca debe romper la UI */ }
+    }, true);
     document.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); cmdkEl ? closeCmdk() : openCmdk(); }
       else if (e.key === 'Escape') { if (cmdkEl) closeCmdk(); else if (drawerOpen) closeDrawer(); else closePop(); }

@@ -66,3 +66,37 @@ jobs:
 
       - name: Click-crawler quirúrgico (0 errores)
         run: node tools/crawl-test.js
+
+  anti-scroll:
+    name: Gate anti-scroll + capturas (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: npm install --no-audit --no-fund
+
+      - name: Instalar Playwright + Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: Build del archivo único
+        run: node tools/build.js
+
+      - name: Medir scroll horizontal (1366 y 1900px) + capturas
+        run: node tools/anti-scroll-test.js
+
+      - name: Subir capturas (revisión visual)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas-v2
+          path: screenshots/
+          if-no-files-found: warn
